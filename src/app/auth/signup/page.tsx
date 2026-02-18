@@ -5,7 +5,7 @@ import Link from "next/link";
 
 export default function LoginPage() {
   return (
-    <section className="flex min-h-screen bg-zinc-50 px-4 py-16 md:py-32 dark:bg-transparent">
+    <section className="flex min-h-screen bg-zinc-50 px-4 py-16 dark:bg-transparent">
       <form
         action=""
         className="bg-card m-auto h-fit w-full max-w-sm rounded-[calc(var(--radius)+.125rem)] border p-0.5 shadow-md dark:[--color-muted:var(--color-zinc-900)]"
@@ -18,8 +18,8 @@ export default function LoginPage() {
             <p className="text-sm">Welcome! Create an account to get started</p>
           </div>
 
-          <div className="mt-6 grid grid-cols-2 gap-3">
-            <Button type="button" variant="outline">
+          <div className="mt-6">
+            <Button type="button" variant="outline" className="w-full">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="0.98em"
@@ -44,26 +44,6 @@ export default function LoginPage() {
                 ></path>
               </svg>
               <span>Google</span>
-            </Button>
-            <Button type="button" variant="outline">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="1em"
-                height="1em"
-                viewBox="0 0 256 256"
-              >
-                <path fill="#f1511b" d="M121.666 121.666H0V0h121.666z"></path>
-                <path fill="#80cc28" d="M256 121.666H134.335V0H256z"></path>
-                <path
-                  fill="#00adef"
-                  d="M121.663 256.002H0V134.336h121.663z"
-                ></path>
-                <path
-                  fill="#fbbc09"
-                  d="M256 256.002H134.335V134.336H256z"
-                ></path>
-              </svg>
-              <span>Microsoft</span>
             </Button>
           </div>
 
@@ -113,7 +93,7 @@ export default function LoginPage() {
           <p className="text-accent-foreground text-center text-sm">
             Have an account ?
             <Button asChild variant="link" className="px-2">
-              <Link href="#">Sign In</Link>
+              <Link href="/auth/signin">Sign In</Link>
             </Button>
           </p>
         </div>
