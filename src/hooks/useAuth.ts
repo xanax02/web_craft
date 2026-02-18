@@ -88,5 +88,12 @@ export const useAuth = () => {
     }
   };
 
-  return { handleSignIn, handleSignUp, handleSignOut, isLoading };
+  return {
+    handleSignIn,
+    handleSignUp,
+    handleSignOut,
+    isLoading,
+    signInForm,
+    signUpForm,
+  };
 };
