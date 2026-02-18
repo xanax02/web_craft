@@ -20,8 +20,7 @@ export default convexAuthNextjsMiddleware(
     const isAuthenticated = await convexAuth.isAuthenticated();
 
     if (clientAuthMatcher(req) && isAuthenticated) {
-      //needs to be changed if redirect to some other page.
-      return nextjsMiddlewareRedirect(req, "/");
+      return nextjsMiddlewareRedirect(req, "/client");
     }
 
     if (protectedMatcher(req) && !isAuthenticated) {
