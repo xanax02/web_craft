@@ -6,6 +6,6 @@ export const byPassRoutes = [
   "/api/polar/webhook",
 ];
 
-export const clientAuthRoutes = ["auth/signin", "auth/signup"];
+export const clientAuthRoutes = ["/auth/signin", "/auth/signup"];
 
 export const protectedRoutes = ["/client/(.*)"];
