@@ -1,6 +1,8 @@
 import { convexAuthNextjsToken } from "@convex-dev/auth/nextjs/server"
 import { preloadQuery } from 'convex/nextjs'
 import { api } from "../../convex/_generated/api"
+import { ConvexUserRaw, normalizeProfile } from "@/types/user"
+import { Id } from "../../convex/_generated/dataModel"
 
 export const ProfileQuery = async() => {
     return await preloadQuery(
@@ -10,8 +12,14 @@ export const ProfileQuery = async() => {
     )
 }
 
-export const SubscriptionEntitlementQuery = () => {
+export const SubscriptionEntitlementQuery = async() => {
     const rawProfileData = await ProfileQuery()
 
     const profile = normalizeProfile(rawProfileData._valueJSON as unknown as ConvexUserRaw | null)
+
+    const entitlement = await preloadQuery(
+        api.subscription.getEntitlement,
+        { userId: profile?.id as Id<'users'>},
+        { token: await convexAuthNextjsToken()}
+    )
 }
