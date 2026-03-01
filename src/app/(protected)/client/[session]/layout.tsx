@@ -8,11 +8,11 @@ export default async function Layout({
 }: {
   children: React.ReactNode;
 }) {
-  const { entitlement, profileName } = await SubscriptionEntitlementQuery();
+  // const { entitlement, profileName } = await SubscriptionEntitlementQuery();
 
-  if (!entitlement._valueJSON) {
-    redirect(`/client/${combineSlug(profileName!)}`);
-  }
+  // if (!entitlement._valueJSON) {
+  //   redirect(`/client/${combineSlug(profileName!)}`);
+  // }
 
   return (
     <div className="grid grid-cols-1">
