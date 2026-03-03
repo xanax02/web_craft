@@ -18,19 +18,23 @@ const rootReducer = combineReducers({
   }, {} as ReducersMapObject),
 });
 
-const rootInitialState: Partial<RootState> = {};
+// const rootInitialState: Partial<RootState> = {};
 
-export const store = configureStore({
-  reducer: rootReducer,
-  middleware: (getDefaultMiddlwares) =>
-    getDefaultMiddlwares().concat(
-      ...apis.map((api) => api.middleware as Middleware),
-    ),
-  preloadedState: rootInitialState,
-  devTools: process.env.NODE_ENV !== "production",
-});
+const makeStore = (preloadedState?: Partial<RootState>) => {
+  return configureStore({
+    reducer: rootReducer,
+    middleware: (getDefaultMiddlwares) =>
+      getDefaultMiddlwares().concat(
+        ...apis.map((api) => api.middleware as Middleware),
+      ),
+    preloadedState,
+    devTools: process.env.NODE_ENV !== "production",
+  });
+};
 
-export type AppStore = ReturnType<typeof configureStore>;
+export const store = makeStore();
+
+export type AppStore = ReturnType<typeof makeStore>;
 // export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
 
