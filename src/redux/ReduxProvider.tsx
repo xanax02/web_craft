@@ -8,7 +8,7 @@ export default function ReduxProvider({
   preloadedState,
 }: {
   children: React.ReactNode;
-  preloadedState: Partial<RootState>;
+  preloadedState?: Partial<RootState>;
 }) {
   const storeRef = useRef(makeStore(preloadedState));
 

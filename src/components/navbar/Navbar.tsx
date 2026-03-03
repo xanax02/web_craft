@@ -7,6 +7,7 @@ import { api } from "../../../convex/_generated/api";
 import { CircleQuestionMark, Hash, LayoutTemplate, User } from "lucide-react";
 import { Button } from "../ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { useAppSelector } from "@/redux/store";
 
 type TabProps = {
   lable: string;
@@ -21,6 +22,8 @@ export default function Navbar() {
   const pathName = usePathname();
   const hasCanvas = pathName.includes("canvas");
   const hasStyleGuide = pathName.includes("style-guide");
+
+  const me = useAppSelector((state) => state.profile);
 
   const project = useQuery(
     api.projects.getProject,
@@ -44,7 +47,7 @@ export default function Navbar() {
     <div className="grid grid-cols-2 lg:grid-cols-3 p-6 fixed top-0 left-0 right-0 z-50">
       <div className="flex items-center gap-4">
         <Link
-          href="/client/"
+          href={`/client/${me.name}`}
           className="w-8 h-8 rounded-full border-3 border-white bg-black flex items-center justify-center"
         >
           <div className="w-4 h-4 rounded-full bg-white"></div>
@@ -92,8 +95,8 @@ export default function Navbar() {
         >
           <CircleQuestionMark className="size-5 text-white" />
         </Button>
-        <Avatar className="size-12 ml-2">
-          <AvatarImage />
+        <Avatar className="size-11 ml-2">
+          <AvatarImage src={me.image} />
           <AvatarFallback>
             <User className="size-5 text-black" />
           </AvatarFallback>

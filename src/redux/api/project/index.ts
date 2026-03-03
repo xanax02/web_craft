@@ -24,16 +24,16 @@ interface AutosaveProjectResponse {
 export const ProjectApi = createApi({
   reducerPath: "projectApi",
   baseQuery: fetchBaseQuery({ baseUrl: "/api/project" }),
-  endpoints: (builder) => {
+  endpoints: (builder) => ({
     autosaveProject: builder.mutation<
-      AutosaveProjectRequest,
-      AutosaveProjectResponse
+      AutosaveProjectResponse,
+      AutosaveProjectRequest
     >({
       query: (data) => ({
         url: "",
         method: "PATCH",
         body: data,
       }),
-    });
-  },
+    }),
+  }),
 });
