@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/theme/ThemeProvider";
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import { ConvexClientProvider } from "@/convex/ClientProvider";
+import ReduxProvider from "@/redux/ReduxProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,7 +39,7 @@ export default function RootLayout({
               enableSystem
               disableTransitionOnChange
             >
-              {children}
+              <ReduxProvider preloadedState={{}}>{children}</ReduxProvider>
             </ThemeProvider>
           </ConvexClientProvider>
         </body>

@@ -20,7 +20,7 @@ const rootReducer = combineReducers({
 
 // const rootInitialState: Partial<RootState> = {};
 
-const makeStore = (preloadedState?: Partial<RootState>) => {
+export const makeStore = (preloadedState?: Partial<RootState>) => {
   return configureStore({
     reducer: rootReducer,
     middleware: (getDefaultMiddlwares) =>
@@ -36,7 +36,7 @@ export const store = makeStore();
 
 export type AppStore = ReturnType<typeof makeStore>;
 // export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch;
+export type AppDispatch = AppStore["dispatch"];
 
 export const useAppSelector = useSelector.withTypes<RootState>();
 export const useAppDispatch = useDispatch.withTypes<AppDispatch>();
