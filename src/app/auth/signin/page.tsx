@@ -1,5 +1,5 @@
 "use client";
-import { GoogleOauthBtn } from "@/components/Oauth/GoogleOauthBtn";
+import { GoogleOauthBtn } from "@/components/creativeButtons/Oauth/GoogleOauthBtn";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
