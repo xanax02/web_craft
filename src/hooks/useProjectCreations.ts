@@ -7,4 +7,14 @@ export const useProjectCreation = () => {
 
   const user = useAppSelector((state) => state.profile);
   const projectsState = useAppSelector((state) => state.projects);
+
+  const createProject = () => {};
+
+  return {
+    projects: projectsState?.projects,
+    canCreate: !!user?.id,
+    isCreating: projectsState?.isCreating,
+    projectsTotal: projectsState?.total,
+    createProject,
+  };
 };
