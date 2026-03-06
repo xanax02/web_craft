@@ -9,7 +9,7 @@ export default function CreateProjectButton() {
   return (
     <Button
       variant="default"
-      onClick={createProject}
+      onClick={() => createProject()}
       disabled={!canCreate || isCreating}
       className="flex items-center gap-2 cursor-pointer rounded-full"
     >
