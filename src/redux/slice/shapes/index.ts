@@ -5,7 +5,7 @@ import {
   PayloadAction,
   EntityState,
 } from "@reduxjs/toolkit";
-import type { Point } from "../viewport";
+import type { Point } from "../../slice/viewport";
 
 export type Tool =
   | "select"
