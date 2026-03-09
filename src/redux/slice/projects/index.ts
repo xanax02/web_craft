@@ -92,6 +92,10 @@ const projectsSlice = createSlice({
       state.error = null;
       state.createError = null;
     },
+    addProject: (state, action: PayloadAction<ProjectSummary>) => {
+      state.projects.push(action.payload);
+      state.total += 1;
+    },
   },
 });
 
@@ -107,4 +111,5 @@ export const {
   removeProject,
   updateProject,
   clearProjects,
+  addProject,
 } = projectsSlice.actions;
