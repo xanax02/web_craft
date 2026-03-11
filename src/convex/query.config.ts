@@ -30,3 +30,26 @@ export const SubscriptionEntitlementQuery = async () => {
     profileName: profile?.name,
   };
 };
+
+export const ProjectsQuery = async () => {
+  const rowProfileData = await ProfileQuery();
+
+  const profile = normalizeProfile(
+    rowProfileData as unknown as ConvexUserRaw | null,
+  );
+
+  if (!profile) {
+    return { projects: null, profile: null };
+  }
+
+  const projects = await preloadQuery(
+    api.projects.getProjects,
+    { userId: profile.id as Id<"users"> },
+    { token: await convexAuthNextjsToken() },
+  );
+
+  return {
+    projects,
+    profile,
+  };
+};

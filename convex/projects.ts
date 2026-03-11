@@ -77,3 +77,27 @@ async function getNextProjectNumber(ctx: any, userId: string): Promise<number> {
 
   return projectNumber;
 }
+
+export const getProjects = query({
+  args: {
+    userId: v.id("users"),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { userId, limit = 20 }) => {
+    const allProjects = await ctx.db
+      .query("projects")
+      .withIndex("by_userId", (q: any) => q.eq("userId", userId))
+      .collect();
+
+    const projects = allProjects.slice(0, limit);
+
+    return projects.map((project) => ({
+      _id: project._id,
+      name: project.name,
+      projectNumber: project.projectNumber,
+      lastModified: project.lastModified,
+      createdAt: project.createdAt,
+      isPublic: project.isPublic,
+    }));
+  },
+});

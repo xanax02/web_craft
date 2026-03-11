@@ -33,12 +33,12 @@ export default function Navbar() {
   const tabs: TabProps[] = [
     {
       lable: "Canvas",
-      href: `/client//canvas?project=${projectId}`,
+      href: `/client/${me?.name}/canvas?project=${projectId}`,
       icon: <Hash className="h-4 w-4" />,
     },
     {
       lable: "Style Guide",
-      href: `/client//style-guide?project=${projectId}`,
+      href: `/client/${me?.name}/style-guide?project=${projectId}`,
       icon: <LayoutTemplate className="h-4 w-4" />,
     },
   ];
