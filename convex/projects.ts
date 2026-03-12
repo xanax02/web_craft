@@ -98,6 +98,7 @@ export const getProjects = query({
       lastModified: project.lastModified,
       createdAt: project.createdAt,
       isPublic: project.isPublic,
+      thumbnail: project.thumbnail,
     }));
   },
 });

@@ -33,9 +33,8 @@ export const SubscriptionEntitlementQuery = async () => {
 
 export const ProjectsQuery = async () => {
   const rowProfileData = await ProfileQuery();
-
   const profile = normalizeProfile(
-    rowProfileData as unknown as ConvexUserRaw | null,
+    rowProfileData._valueJSON as unknown as ConvexUserRaw | null,
   );
 
   if (!profile) {

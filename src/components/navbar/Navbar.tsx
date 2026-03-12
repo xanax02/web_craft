@@ -8,6 +8,7 @@ import { CircleQuestionMark, Hash, LayoutTemplate, User } from "lucide-react";
 import { Button } from "../ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { useAppSelector } from "@/redux/store";
+import CreateProjectButton from "../creativeButtons/project/CreateProjectButton";
 
 type TabProps = {
   lable: string;
@@ -101,6 +102,7 @@ export default function Navbar() {
             <User className="size-5 text-black" />
           </AvatarFallback>
         </Avatar>
+        <CreateProjectButton />
       </div>
     </div>
   );
