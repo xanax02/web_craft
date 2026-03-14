@@ -102,3 +102,24 @@ export const getProjects = query({
     }));
   },
 });
+
+export const getProjectStyleGuide = query({
+  args: { projectId: v.id("projects") },
+  handler: async (ctx, { projectId }) => {
+    const user = await getAuthUserId(ctx);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const project = await ctx.db.get(projectId);
+    if (!project) {
+      throw new Error("Project not found");
+    }
+
+    if (project.userId !== user && !project.isPublic) {
+      throw new Error("Unauthorized");
+    }
+
+    return project.styleGuide ? JSON.parse(project.styleGuide) : null;
+  },
+});
