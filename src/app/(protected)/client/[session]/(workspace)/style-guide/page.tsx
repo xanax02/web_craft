@@ -1,3 +1,4 @@
+import MoodBoard from "@/components/style/moodBoard/MoodBoard";
 import ThemeContent from "@/components/style/theme/ThemeContent";
 import StyleGuideTypography from "@/components/style/typography/StyleGuideTypography";
 import { TabsContent } from "@/components/ui/tabs";
@@ -26,7 +27,7 @@ export default async function Page({
   const guidedImages = exisitingMoodBoardImages.images
     ._valueJSON as unknown as MoodBoardImages[];
 
-  console.log("guidedImages", guidedImages);
+  // console.log("guidedImages", guidedImages);
 
   return (
     <div>
@@ -52,6 +53,9 @@ export default async function Page({
       </TabsContent>
       <TabsContent value="typography">
         <StyleGuideTypography typographyGuide={typographyGuide} />
+      </TabsContent>
+      <TabsContent value="components">
+        <MoodBoard guideImages={guidedImages} />
       </TabsContent>
     </div>
   );

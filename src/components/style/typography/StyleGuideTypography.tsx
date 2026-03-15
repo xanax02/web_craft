@@ -23,7 +23,7 @@ export default function StyleGuideTypography({
             <div key={index} className="flex flex-col gap-5">
               <div>
                 <h3 className="text-lg font-medium text-foreground/50">
-                  {section.section}
+                  {section.title}
                 </h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
