@@ -88,3 +88,40 @@ export const removeMoodBoardImage = mutation({
     return { success: true, imageCount: updatedImages.length };
   },
 });
+
+export const addMoodBoardImage = mutation({
+  args: {
+    projectId: v.id("projects"),
+    storageId: v.id("_storage"),
+  },
+  handler: async (ctx, { projectId, storageId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("User not found");
+    }
+
+    const project = await ctx.db.get(projectId);
+    if (!project) {
+      throw new Error("Project not found");
+    }
+
+    if (project.userId != userId) {
+      throw new Error("Unauthorized");
+    }
+
+    const currentImages = project.moodBoardImages || [];
+
+    if (currentImages.length >= 5) {
+      throw new Error("Maximum 5 images allowed");
+    }
+
+    const updatedImages = [...currentImages, storageId];
+
+    await ctx.db.patch(projectId, {
+      moodBoardImages: updatedImages,
+      lastModified: Date.now(),
+    });
+
+    return { success: true, imageCount: updatedImages.length };
+  },
+});
