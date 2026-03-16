@@ -233,6 +233,18 @@ export const useMoodBoard = (guideImages: MoodBoardImages[]) => {
           }
         } catch (error) {
           console.log(error);
+          const errorImages = getValues("images");
+          const errorIndex = errorImages.findIndex(
+            (img) => img.id === image.id,
+          );
+          if (errorIndex !== -1) {
+            errorImages[errorIndex] = {
+              ...errorImages[errorIndex],
+              uploading: false,
+              error: "Upload fail",
+            };
+            setValue("images", [...errorImages]);
+          }
         }
       }
     }
@@ -242,5 +254,23 @@ export const useMoodBoard = (guideImages: MoodBoardImages[]) => {
     if (images.length > 0) {
       uploadPendingImages();
     }
+  }, [images, getValues, setValue, uploadImage]);
+
+  useEffect(() => {
+    return () => {
+      images.forEach((img) => URL.revokeObjectURL(img.preview));
+    };
   }, []);
+
+  return {
+    form,
+    images,
+    dragActive,
+    addImage,
+    removeImage,
+    handleDrag,
+    handleDrop,
+    handleFileInput,
+    canAddMore: images.length < 5,
+  };
 };
