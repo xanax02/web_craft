@@ -30,7 +30,7 @@ export default function MoodBoard({ guideImages }: Props) {
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
-        onDrop={handleDrag}
+        onDrop={handleDrop}
       >
         <div className="absolute inset-0 opacity-5">
           <div className="w-full h-full bg-linear-to-br from-primary/20 to-transparent rounded-3xl"></div>
