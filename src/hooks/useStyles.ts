@@ -99,7 +99,7 @@ export const useMoodBoard = (guideImages: MoodBoardImages[]) => {
           );
           if (clientIndex !== -1) {
             //clean up old blob url if exist
-            if (mergedImages[clientIndex].preview.startsWith("blob:")) {
+            if (mergedImages[clientIndex]?.preview?.startsWith("blob:")) {
               URL.revokeObjectURL(mergedImages[clientIndex].preview);
             }
 
@@ -208,13 +208,19 @@ export const useMoodBoard = (guideImages: MoodBoardImages[]) => {
 
   const uploadPendingImages = async () => {
     const currentImages = getValues("images");
+
     for (let i = 0; i < currentImages.length; i++) {
       const image = currentImages[i];
+
       if (!image.uploaded && !image.uploading && !image.error) {
         const updatedImages = [...currentImages];
         updatedImages[i] = { ...image, uploading: true };
         setValue("images", updatedImages);
+
         try {
+          // this wait  here creates a break out from batch boundary
+          // meaning the rendering will not be batched as react will now flush
+          // the render due to await so it can create multiple concurrent loops
           const { storageId } = await uploadImage(image.file!);
 
           const finalImages = getValues("images");
@@ -254,7 +260,7 @@ export const useMoodBoard = (guideImages: MoodBoardImages[]) => {
     if (images.length > 0) {
       uploadPendingImages();
     }
-  }, [images, getValues, setValue, uploadImage]);
+  }, [images]);
 
   useEffect(() => {
     return () => {

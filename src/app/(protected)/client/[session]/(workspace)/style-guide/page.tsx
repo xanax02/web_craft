@@ -27,8 +27,6 @@ export default async function Page({
   const guidedImages = exisitingMoodBoardImages.images
     ._valueJSON as unknown as MoodBoardImages[];
 
-  // console.log("guidedImages", guidedImages);
-
   return (
     <div>
       <TabsContent value="colors" className="space-y-8">

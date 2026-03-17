@@ -68,26 +68,28 @@ export default function ImagesBoard({
         marginTop: marginTop,
       }}
     >
-      <div className="relative w-40 h-48 rounded-2xl overflow-hidden bg-white shadow-xl border border-border/20 hover:scale-105 transition-all duration-200">
-        <Image
-          src={image.preview}
-          alt="Mood Board Image"
-          fill
-          className="object-cover"
-        />
-        <UploadState
-          uploading={image.uploading}
-          uploaded={image.uploaded}
-          error={image.error}
-        />
+      {image.preview && (
+        <div className="relative w-40 h-48 rounded-2xl overflow-hidden bg-white shadow-xl border border-border/20 hover:scale-105 transition-all duration-200">
+          <Image
+            src={image.preview}
+            alt="Mood Board Image"
+            fill
+            className="object-cover"
+          />
+          <UploadState
+            uploading={image.uploading}
+            uploaded={image.uploaded}
+            error={image.error}
+          />
 
-        <button
-          onClick={() => removeImage(image.id)}
-          className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-        >
-          <X className="w-4 h-4 text-white" />
-        </button>
-      </div>
+          <button
+            onClick={() => removeImage(image.id)}
+            className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center opacity-0"
+          >
+            <X className="w-4 h-4 text-white" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
