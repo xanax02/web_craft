@@ -1,8 +1,10 @@
 "use client";
 import { Shape } from "@/redux/slice/shapes";
-import { Point } from "@/redux/slice/viewport";
+import { panMove, Point } from "@/redux/slice/viewport";
 import { AppDispatch, useAppDispatch, useAppSelector } from "@/redux/store";
 import { useEffect, useRef, useState } from "react";
+
+const RAF_INTERVAL_MS = 8;
 
 interface TouchPointer {
   id: number;
@@ -216,6 +218,33 @@ export const useInfiniteCanvas = () => {
     const dx = point.x - xx;
     const dy = point.y - yy;
     return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  //performace optimisation and animation
+  //smooth panning
+  const schedulePanMove = (p: Point) => {
+    pendingPanPointRef.current = p;
+    if (panRafRef.current !== null) return;
+
+    panRafRef.current = window.requestAnimationFrame(() => {
+      panRafRef.current = null;
+      const next = pendingPanPointRef.current;
+      if (next) dispatch(panMove(next));
+    });
+  };
+
+  //animation for freehand
+  const freehandTick = (): void => {
+    const now = performance.now();
+
+    if (now - lastFreehandFrameRef.current >= RAF_INTERVAL_MS) {
+      if (freeDrawPointsRef.current.length > 0) requestRender();
+      lastFreehandFrameRef.current = now;
+    }
+
+    if (isDrawingRef.current) {
+      freehandRafRef.current = window.requestAnimationFrame(freehandTick);
+    }
   };
 
   return {
