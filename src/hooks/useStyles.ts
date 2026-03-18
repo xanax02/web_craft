@@ -23,6 +23,8 @@ interface StylesFromData {
   images: MoodBoardImages[];
 }
 
+// TODO: resolve remove image issue
+
 export const useMoodBoard = (guideImages: MoodBoardImages[]) => {
   const [dragActive, setDragActive] = useState(false);
   const searchParams = useSearchParams();
@@ -218,7 +220,7 @@ export const useMoodBoard = (guideImages: MoodBoardImages[]) => {
         setValue("images", updatedImages);
 
         try {
-          // this wait  here creates a break out from batch boundary
+          // this await  here creates a break out from batch boundary
           // meaning the rendering will not be batched as react will now flush
           // the render due to await so it can create multiple concurrent loops
           const { storageId } = await uploadImage(image.file!);

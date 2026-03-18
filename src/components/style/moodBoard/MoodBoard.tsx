@@ -2,6 +2,9 @@
 import { MoodBoardImages, useMoodBoard } from "@/hooks/useStyles";
 import { cn } from "@/lib/utils";
 import ImagesBoard from "./ImagesBoard";
+import { Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useRef } from "react";
 
 type Props = {
   guideImages: MoodBoardImages[];
@@ -17,6 +20,14 @@ export default function MoodBoard({ guideImages }: Props) {
     handleFileInput,
     canAddMore,
   } = useMoodBoard(guideImages);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  console.log("images", images);
 
   return (
     <div className="mx-4 flex flex-col gap-10">
@@ -74,7 +85,95 @@ export default function MoodBoard({ guideImages }: Props) {
             </div>
           </>
         )}
+        <div className="hidden lg:flex absolute inset-0 items-center justify-center">
+          <div className="relative w-full max-w-[700px] h-[300] mx-auto">
+            {images.map((image, index) => {
+              const seed = image.id
+                .split("")
+                .reduce((a, b) => a + b.charCodeAt(0), 0);
+
+              const random1 = ((seed * 9301 + 49297) % 233280) / 233280;
+              // const random2 =
+              //   (((seed + 1) * 9301 + 49297) % 233280) / 233280;
+              const random3 = (((seed + 2) * 9301 + 49297) % 233280) / 233280;
+
+              // squential positioning: each image moves right with slight overlap
+              const imageWidth = 192;
+              const overlapAmount = 30;
+              const spacing = imageWidth - overlapAmount;
+
+              //position from left to right with slight random rotation and minimal vertical offset
+              const rotation = (random1 - 0.5) * 50;
+              const xOffset =
+                index * spacing - ((images.length - 1) * spacing) / 2;
+              const yOffset = (random3 - 0.5) * 30;
+
+              return (
+                <ImagesBoard
+                  key={`desktop-${image.id}`}
+                  image={image}
+                  removeImage={removeImage}
+                  xOffset={xOffset}
+                  yOffset={yOffset}
+                  rotation={rotation}
+                  zIndex={index + 1}
+                  marginLeft="-96px"
+                  marginTop="-112px"
+                />
+              );
+            })}
+          </div>
+        </div>
+        {images.length === 0 && (
+          <>
+            <div className="relative z-10 space-y-6">
+              <div className="mx-auto w-16 h-16 rounded-2xl bg-muted flex items-center justify-center">
+                <Upload className="w-8 h-8 text-muted-foreground" />
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-lg font-medium text-foreground">
+                  Drop your images here
+                </h3>
+                <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                  Drag and drop upto 5 images to build your mood board
+                </p>
+              </div>
+
+              <Button onClick={handleUploadClick} variant={"outline"}>
+                <Upload className="w-4 h-4 mr-2" />
+                Choose files
+              </Button>
+            </div>
+          </>
+        )}
+
+        {images.length > 0 && canAddMore && (
+          <div className="absolute bottom-6 right-6 z-20">
+            <Button onClick={handleUploadClick} variant={"outline"} size={"sm"}>
+              <Upload className="w-4 h-4 mr-2" />
+              Add More
+            </Button>
+          </div>
+        )}
+
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileInput}
+          className="hidden"
+          accept="image/*"
+          multiple
+        />
       </div>
+      <Button className="w-fit">Generate With AI</Button>
+      {images.length >= 5 && (
+        <div className="text-center p-4 bg-muted/50 rounded-2xl">
+          <p className="text-sm text-muted-foreground">
+            Maximum 5 images reached. Remove an image to add more.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
