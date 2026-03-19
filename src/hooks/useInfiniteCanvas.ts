@@ -12,6 +12,7 @@ import {
   selectShape,
   setTool,
   Shape,
+  Tool,
   updateShape,
 } from "@/redux/slice/shapes";
 import {
@@ -868,12 +869,46 @@ export const useInfiniteCanvas = () => {
     };
   }, [dispatch, entityState.entities, viewport.translate, viewport.scale]);
 
-  //   return {
-  //     onPointerDown,
-  //     onPointerMove,
-  //     onPointerUp,
-  //     onPointerCancel,
-  //     onKeyDown,
-  //     onKeyUp,
-  //   };
+  // connecting hook to actual dom
+  const attachCanvasRef = (ref: HTMLDivElement | null): void => {
+    // clean up any existing event listeners on the old canvas
+    if (canvasRef.current) {
+      canvasRef.current.removeEventListener("wheel", onWheel);
+    }
+    // store new canvas reference
+    canvasRef.current = ref;
+
+    // add wheel event listeners to new canvas
+    if (ref) {
+      ref.addEventListener("wheel", onWheel, { passive: false });
+    }
+  };
+
+  const selectTool = (tool: Tool): void => {
+    dispatch(setTool(tool));
+  };
+
+  const getDraftShape = (): DraftShap | null => draftShapeRef.current;
+  const getFreeDrawPoints = (): ReadonlyArray<Point> =>
+    freeDrawPointsRef.current;
+
+  return {
+    viewport,
+    shapes: shapeList,
+    currentTool,
+    selectedShapes,
+
+    onPointerDown,
+    onPointerMove,
+    onPointerUp,
+    onPointerCancel,
+
+    attachCanvasRef,
+    selectTool,
+    getDraftShape,
+    getFreeDrawPoints,
+    isSidebarOpen,
+    hasSelectedText,
+    setIsSidebarOpen,
+  };
 };
