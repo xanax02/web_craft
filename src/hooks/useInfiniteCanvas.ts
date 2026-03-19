@@ -1,5 +1,11 @@
 "use client";
-import { clearSelection, selectShape, Shape } from "@/redux/slice/shapes";
+import {
+  addText,
+  clearSelection,
+  selectShape,
+  setTool,
+  Shape,
+} from "@/redux/slice/shapes";
 import {
   panMove,
   panStart,
@@ -378,6 +384,41 @@ export const useInfiniteCanvas = () => {
               dispatch(clearSelection());
               blurActiveTextInput();
             }
+          }
+        } else if (currentTool === "eraser") {
+          isErasingRef.current = true;
+          erasedShapesRef.current.clear();
+
+          const hitShape = getShapeAtPoint(world);
+          if (hitShape) {
+            erasedShapesRef.current.add(hitShape.id);
+          } else {
+            blurActiveTextInput();
+          }
+        } else if (currentTool === "text") {
+          dispatch(addText({ x: world.x, y: world.y }));
+          dispatch(setTool("select"));
+        } else {
+          isDrawingRef.current = true;
+          if (
+            currentTool === "rect" ||
+            currentTool === "ellipse" ||
+            currentTool === "frame" ||
+            currentTool === "arrow" ||
+            currentTool === "line"
+          ) {
+            console.log("starting to draw:", currentTool, "at", world);
+            draftShapeRef.current = {
+              type: currentTool,
+              startWorld: world,
+              currentWorld: world,
+            };
+            requestRender();
+          } else if (currentTool === "freedraw") {
+            freeDrawPointsRef.current = [world];
+            lastFreehandFrameRef.current = performance.now();
+            freehandRafRef.current = window.requestAnimationFrame(freehandTick);
+            requestRender();
           }
         }
       }
