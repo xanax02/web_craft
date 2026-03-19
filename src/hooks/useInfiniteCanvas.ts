@@ -1,12 +1,23 @@
 "use client";
 import {
+  addArrow,
+  addEllipse,
+  addFrame,
+  addFreeDrawShape,
+  addLine,
+  addRect,
   addText,
   clearSelection,
+  removeShape,
   selectShape,
   setTool,
   Shape,
+  updateShape,
 } from "@/redux/slice/shapes";
 import {
+  handToolDisable,
+  handToolEnable,
+  panEnd,
   panMove,
   panStart,
   Point,
@@ -15,7 +26,7 @@ import {
   wheelZoom,
 } from "@/redux/slice/viewport";
 import { AppDispatch, useAppDispatch, useAppSelector } from "@/redux/store";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "rect";
 
 const RAF_INTERVAL_MS = 8;
 
@@ -25,7 +36,7 @@ interface TouchPointer {
 }
 
 interface DraftShap {
-  type: "frame" | "react" | "ellipse" | "arrow" | "line";
+  type: "frame" | "rect" | "ellipse" | "arrow" | "line";
   startWorld: Point;
   currentWorld: Point;
 }
@@ -275,7 +286,7 @@ export const useInfiniteCanvas = () => {
   };
 
   //onClick
-  const onPointerDown: React.PointerEventHandler<HTMLDivElement> = (e) => {
+  const onPointerDown: rect.PointerEventHandler<HTMLDivElement> = (e) => {
     const target = e.target as HTMLElement;
 
     const isButton =
@@ -423,5 +434,214 @@ export const useInfiniteCanvas = () => {
         }
       }
     }
+  };
+
+  const onPointerMove: React.PointerEventHandler<HTMLDivElement> = (e) => {
+    const local = getLocalPointFromPtr(e.nativeEvent);
+    const world = screenToWorld(local, viewport.translate, viewport.scale);
+
+    if (viewport.mode === "panning" || viewport.mode === "shiftPanning") {
+      schedulePanMove(local);
+      return;
+    }
+
+    if (isErasingRef.current && currentTool === "eraser") {
+      const hitShape = getShapeAtPoint(world);
+      if (hitShape && !erasedShapesRef.current.has(hitShape.id)) {
+        // delete the shape if not deleted, in this drag
+        dispatch(removeShape(hitShape.id));
+        erasedShapesRef.current.add(hitShape.id);
+      }
+    }
+
+    if (
+      isMovingRef.current &&
+      moveStartRef.current &&
+      currentTool === "select"
+    ) {
+      const deltaX = world.x - moveStartRef.current.x;
+      const deltaY = world.y - moveStartRef.current.y;
+
+      Object.keys(initialShapePositionsRef.current).forEach((id) => {
+        const initialPos = initialShapePositionsRef.current[id];
+        const shape = entityState.entities[id];
+
+        if (shape && initialPos) {
+          if (
+            shape.type === "frame" ||
+            shape.type === "rect" ||
+            shape.type === "ellipse" ||
+            shape.type === "text" ||
+            shape.type === "generatedui"
+          ) {
+            if (
+              typeof initialPos.x === "number" &&
+              typeof initialPos.y === "number"
+            ) {
+              dispatch(
+                updateShape({
+                  id,
+                  patch: {
+                    x: initialPos.x + deltaX,
+                    y: initialPos.y + deltaY,
+                  },
+                }),
+              );
+            }
+          } else if (shape.type === "freedraw") {
+            const initialPoints = initialPos.points;
+            if (initialPoints) {
+              const newPoints = initialPoints.map((point) => ({
+                x: point.x + deltaX,
+                y: point.y + deltaY,
+              }));
+              dispatch(
+                updateShape({
+                  id,
+                  patch: {
+                    points: newPoints,
+                  },
+                }),
+              );
+            }
+          } else if (shape.type === "line" || shape.type === "arrow") {
+            if (
+              typeof initialPos.startX === "number" &&
+              typeof initialPos.startY === "number" &&
+              typeof initialPos.endX === "number" &&
+              typeof initialPos.endY === "number"
+            ) {
+              dispatch(
+                updateShape({
+                  id,
+                  patch: {
+                    startX: initialPos.startX + deltaX,
+                    startY: initialPos.startY + deltaY,
+                    endX: initialPos.endX + deltaX,
+                    endY: initialPos.endY + deltaY,
+                  },
+                }),
+              );
+            }
+          }
+        }
+      });
+    }
+
+    if (isDrawingRef.current) {
+      if (draftShapeRef.current) {
+        draftShapeRef.current.currentWorld = world;
+        requestRender();
+      } else if (currentTool === "freedraw") {
+        freeDrawPointsRef.current.push(world);
+      }
+    }
+  };
+
+  const finalizeDrawingIfAny = (): void => {
+    if (!isDrawingRef.current) return;
+    isDrawingRef.current = false;
+
+    if (freehandRafRef.current) {
+      window.cancelAnimationFrame(freehandRafRef.current);
+      freehandRafRef.current = null;
+    }
+
+    const draft = draftShapeRef.current;
+
+    if (draft) {
+      const x = Math.min(draft.startWorld.x, draft.currentWorld.x);
+      const y = Math.min(draft.startWorld.y, draft.currentWorld.y);
+      const w = Math.abs(draft.currentWorld.x - draft.startWorld.x);
+      const h = Math.abs(draft.currentWorld.y - draft.startWorld.y);
+
+      if (w > 1 && h > 1) {
+        if (draft.type === "frame") {
+          console.log("Adding frame shape:", { x, y, w, h });
+          dispatch(addFrame({ x, y, w, h }));
+        } else if (draft.type === "rect") {
+          dispatch(addRect({ x, y, w, h }));
+        } else if (draft.type === "ellipse") {
+          dispatch(addEllipse({ x, y, w, h }));
+        } else if (draft.type === "arrow") {
+          dispatch(
+            addArrow({
+              startX: draft.startWorld.x,
+              startY: draft.startWorld.y,
+              endX: draft.currentWorld.x,
+              endY: draft.currentWorld.y,
+            }),
+          );
+        } else if (draft.type === "line") {
+          dispatch(
+            addLine({
+              startX: draft.startWorld.x,
+              startY: draft.startWorld.y,
+              endX: draft.currentWorld.x,
+              endY: draft.currentWorld.y,
+            }),
+          );
+        }
+      }
+      draftShapeRef.current = null;
+    } else if (currentTool === "freedraw") {
+      const pts = freeDrawPointsRef.current;
+      if (pts.length > 1) {
+        dispatch(addFreeDrawShape({ points: pts }));
+      }
+      freeDrawPointsRef.current = [];
+    }
+    requestRender();
+  };
+
+  const onPointerUp: React.PointerEventHandler<HTMLDivElement> = (e) => {
+    canvasRef.current?.releasePointerCapture(e.pointerId);
+
+    if (viewport.mode === "panning" || viewport.mode === "shiftPanning") {
+      dispatch(panEnd());
+    }
+
+    if (isMovingRef.current) {
+      isMovingRef.current = false;
+      moveStartRef.current = null;
+      initialShapePositionsRef.current = {};
+    }
+
+    if (isErasingRef.current) {
+      isErasingRef.current = false;
+      erasedShapesRef.current.clear();
+    }
+
+    finalizeDrawingIfAny();
+  };
+
+  const onPointerCancel: React.PointerEventHandler<HTMLDivElement> = (e) => {
+    // canvasRef.current?.releasePointerCapture(e.pointerId);
+    onPointerUp(e);
+  };
+
+  const onKeyDown = (e: KeyboardEvent): void => {
+    if ((e.code === "ShiftLeft" || e.code === "ShiftRight") && !e.repeat) {
+      e.preventDefault();
+      isSpacePressed.current = true;
+      dispatch(handToolEnable());
+    }
+  };
+
+  const onKeyUp = (e: KeyboardEvent): void => {
+    if (e.code === "ShiftLeft" || e.code === "ShiftRight") {
+      e.preventDefault();
+      isSpacePressed.current = false;
+      dispatch(handToolDisable());
+    }
+  };
+
+  return {
+    onPointerDown,
+    onPointerMove,
+    onPointerUp,
+    onPointerCancel,
+    onKeyDown,
+    onKeyUp,
   };
 };
