@@ -59,7 +59,7 @@ export const useInfiniteCanvas = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   //if text is selected
-  const hasSelectedText = selectedShapes.some((id: any) => {
+  const hasSelectedText = Object.keys(selectedShapes).some((id: string) => {
     const shape = shapesEntities[id];
     return shape?.type === "text";
   });
@@ -809,7 +809,7 @@ export const useInfiniteCanvas = () => {
               : newActualX + newActualWidth;
           newEndX =
             shape.startX < shape.endX
-              ? newActualX + newActualWidth + newActualX
+              ? newActualX + newActualWidth
               : newActualX;
         } else {
           const scaleX = newActualWidth / actualWidth;
