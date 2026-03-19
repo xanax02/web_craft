@@ -1,3 +1,5 @@
+import InfiniteCanvas from "@/components/canvas/infiniteCanvas/InfiniteCanvas";
+import ProjectProvider from "@/components/projects/provider/ProjectProvider";
 import { ProjectQuery, ProjectsQuery } from "@/convex/query.config";
 
 interface CanvasPageProps {
@@ -32,11 +34,11 @@ export default async function Page({ searchParams }: CanvasPageProps) {
     </div>;
   }
 
-  // return (
-  //   <ProjectP intialProject={project}>
-  //     <InfiniteCanvas />
-  //   </ProjectsProvider>
-  // )
+  return (
+    <ProjectProvider initialProject={project}>
+      <InfiniteCanvas />
+    </ProjectProvider>
+  );
 
   return <h1>hi</h1>;
 }
