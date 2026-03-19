@@ -286,7 +286,7 @@ export const useInfiniteCanvas = () => {
   };
 
   //onClick
-  const onPointerDown: rect.PointerEventHandler<HTMLDivElement> = (e) => {
+  const onPointerDown: React.PointerEventHandler<HTMLDivElement> = (e) => {
     const target = e.target as HTMLElement;
 
     const isButton =
@@ -635,6 +635,19 @@ export const useInfiniteCanvas = () => {
       dispatch(handToolDisable());
     }
   };
+
+  useEffect(() => {
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("keyup", onKeyUp);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("keyup", onKeyUp);
+      if (freehandRafRef.current) {
+        window.cancelAnimationFrame(freehandRafRef.current);
+      }
+      if (panRafRef.current) window.cancelAnimationFrame(panRafRef.current);
+    };
+  }, []);
 
   return {
     onPointerDown,
