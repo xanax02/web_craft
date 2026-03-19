@@ -26,7 +26,7 @@ import {
   wheelZoom,
 } from "@/redux/slice/viewport";
 import { AppDispatch, useAppDispatch, useAppSelector } from "@/redux/store";
-import { useEffect, useRef, useState } from "rect";
+import { useEffect, useRef, useState } from "react";
 
 const RAF_INTERVAL_MS = 8;
 
@@ -110,7 +110,7 @@ export const useInfiniteCanvas = () => {
   const resizeDataRef = useRef<{
     shapeId: string;
     corner: string;
-    intialBounds: { x: number; y: number; w: number; h: number };
+    initialBounds: { x: number; y: number; w: number; h: number };
     startPoint: { x: number; y: number };
   } | null>(null);
 
@@ -123,7 +123,7 @@ export const useInfiniteCanvas = () => {
   // updating refs
   const [, force] = useState(0);
   const requestRender = (): void => {
-    force((n) => (n + 1) | 0);
+    force((n: number) => (n + 1) | 0);
   };
 
   //coordinate conversion -> sreen coods to canvas coords
@@ -649,12 +649,231 @@ export const useInfiniteCanvas = () => {
     };
   }, []);
 
-  return {
-    onPointerDown,
-    onPointerMove,
-    onPointerUp,
-    onPointerCancel,
-    onKeyDown,
-    onKeyUp,
-  };
+  //   handling resizing
+  useEffect(() => {
+    const handleResizeStart = (e: CustomEvent) => {
+      const { shapeId, corner, bounds } = e.detail;
+      isResizingRef.current = true;
+
+      resizeDataRef.current = {
+        shapeId,
+        corner,
+        initialBounds: bounds,
+        startPoint: { x: e.detail.clientX || 0, y: e.detail.clientY || 0 },
+      };
+    };
+
+    const handleResizeMove = (e: CustomEvent) => {
+      if (!isResizingRef.current || !resizeDataRef.current) return;
+
+      const { shapeId, corner, initialBounds } = resizeDataRef.current;
+      const { clientX, clientY } = e.detail;
+
+      const canvasEl = canvasRef.current;
+
+      if (!canvasEl) return;
+
+      const rect = canvasEl.getBoundingClientRect();
+      const localX = clientX - rect.left;
+      const localY = clientY - rect.top;
+
+      const world = screenToWorld(
+        { x: localX, y: localY },
+        viewport.translate,
+        viewport.scale,
+      );
+
+      const shape = entityState.entities[shapeId];
+
+      if (!shape) return;
+
+      const newBounds = { ...initialBounds };
+
+      switch (corner) {
+        case "nw":
+          newBounds.w = Math.max(
+            10,
+            initialBounds.w + (initialBounds.x - world.x),
+          );
+          newBounds.h = Math.max(
+            10,
+            initialBounds.h + (initialBounds.y - world.y),
+          );
+          newBounds.x = world.x;
+          newBounds.y = world.y;
+          break;
+        case "ne":
+          newBounds.w = Math.max(10, world.x - initialBounds.x);
+          newBounds.h = Math.max(
+            10,
+            initialBounds.h + (initialBounds.y - world.y),
+          );
+          newBounds.y = world.y;
+          break;
+        case "sw":
+          newBounds.w = Math.max(
+            10,
+            initialBounds.w + (initialBounds.x - world.x),
+          );
+          newBounds.h = Math.max(10, world.y - initialBounds.y);
+          newBounds.x = world.x;
+          break;
+        case "se":
+          newBounds.w = Math.max(10, world.x - initialBounds.x);
+          newBounds.h = Math.max(10, world.y - initialBounds.y);
+          break;
+      }
+
+      if (
+        shape.type === "frame" ||
+        shape.type === "rect" ||
+        shape.type === "ellipse"
+      ) {
+        dispatch(
+          updateShape({
+            id: shapeId,
+            patch: {
+              x: newBounds.x,
+              y: newBounds.y,
+              w: newBounds.w,
+              h: newBounds.h,
+            },
+          }),
+        );
+      } else if (shape.type === "freedraw") {
+        const xs = shape.points.map((p: { x: number; y: number }) => p.x);
+        const ys = shape.points.map((p: { x: number; y: number }) => p.y);
+
+        const actualMinX = Math.min(...xs);
+        const actualMinY = Math.min(...ys);
+        const actualMaxX = Math.max(...xs);
+        const actualMaxY = Math.max(...ys);
+        const actualWidth = actualMaxX - actualMinX;
+        const actualHeight = actualMaxY - actualMinY;
+
+        const newActualX = newBounds.x + 5;
+        const newActualY = newBounds.y + 5;
+        const newActualWidth = Math.max(10, newBounds.w - 10);
+        const newActualHeight = Math.max(10, newBounds.h - 10);
+
+        const scaleX = actualWidth > 0 ? newActualWidth / actualWidth : 1;
+        const scaleY = actualHeight > 0 ? newActualHeight / actualHeight : 1;
+
+        const scaledPoints = shape.points.map(
+          (p: { x: number; y: number }) => ({
+            x: newActualX + (p.x - actualMinX) * scaleX,
+            y: newActualY + (p.y - actualMinY) * scaleY,
+          }),
+        );
+
+        dispatch(
+          updateShape({
+            id: shapeId,
+            patch: {
+              points: scaledPoints,
+            },
+          }),
+        );
+      } else if (shape.type === "line" || shape.type === "arrow") {
+        const actualMinX = Math.min(shape.startX, shape.endX);
+        const actualMaxX = Math.max(shape.startX, shape.endX);
+        const actualMinY = Math.min(shape.startY, shape.endY);
+        const actualMaxY = Math.max(shape.startY, shape.endY);
+        const actualWidth = actualMaxX - actualMinX;
+        const actualHeight = actualMaxY - actualMinY;
+
+        const newActualX = newBounds.x + 5;
+        const newActualY = newBounds.y + 5;
+        const newActualWidth = Math.max(10, newBounds.w - 10);
+        const newActualHeight = Math.max(10, newBounds.h - 10);
+
+        let newStartX, newStartY, newEndX, newEndY;
+        if (actualWidth === 0) {
+          newStartX = newActualX + newActualWidth / 2;
+          newEndX = newActualX + newActualWidth / 2;
+          newStartY =
+            shape.startY < shape.endY
+              ? newActualY
+              : newActualY + newActualHeight;
+          newEndY =
+            shape.startY < shape.endY
+              ? newActualY + newActualHeight
+              : newActualY;
+        } else if (actualHeight === 0) {
+          newStartY = newActualY + newActualHeight / 2;
+          newEndY = newActualY + newActualHeight / 2;
+          newStartX =
+            shape.startX < shape.endX
+              ? newActualX
+              : newActualX + newActualWidth;
+          newEndX =
+            shape.startX < shape.endX
+              ? newActualX + newActualWidth + newActualX
+              : newActualX;
+        } else {
+          const scaleX = newActualWidth / actualWidth;
+          const scaleY = newActualHeight / actualHeight;
+
+          newStartX = newActualX + (shape.startX - actualMinX) * scaleX;
+          newStartY = newActualY + (shape.startY - actualMinY) * scaleY;
+          newEndX = newActualX + (shape.endX - actualMinX) * scaleX;
+          newEndY = newActualY + (shape.endY - actualMinY) * scaleY;
+
+          dispatch(
+            updateShape({
+              id: shapeId,
+              patch: {
+                startX: newStartX,
+                startY: newStartY,
+                endX: newEndX,
+                endY: newEndY,
+              },
+            }),
+          );
+        }
+      }
+    };
+
+    const handleResizeEnd = () => {
+      isResizingRef.current = false;
+      resizeDataRef.current = null;
+    };
+
+    window.addEventListener(
+      "shape-resize-start",
+      handleResizeStart as EventListener,
+    );
+    window.addEventListener(
+      "shape-resize-move",
+      handleResizeMove as EventListener,
+    );
+    window.addEventListener(
+      "shape-resize-end",
+      handleResizeEnd as EventListener,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "shape-resize-start",
+        handleResizeStart as EventListener,
+      );
+      window.removeEventListener(
+        "shape-resize-move",
+        handleResizeMove as EventListener,
+      );
+      window.removeEventListener(
+        "shape-resize-end",
+        handleResizeEnd as EventListener,
+      );
+    };
+  }, [dispatch, entityState.entities, viewport.translate, viewport.scale]);
+
+  //   return {
+  //     onPointerDown,
+  //     onPointerMove,
+  //     onPointerUp,
+  //     onPointerCancel,
+  //     onKeyDown,
+  //     onKeyUp,
+  //   };
 };
