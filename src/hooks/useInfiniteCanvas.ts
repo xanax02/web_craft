@@ -1,6 +1,13 @@
 "use client";
-import { Shape } from "@/redux/slice/shapes";
-import { panMove, Point } from "@/redux/slice/viewport";
+import { clearSelection, selectShape, Shape } from "@/redux/slice/shapes";
+import {
+  panMove,
+  panStart,
+  Point,
+  screenToWorld,
+  wheelPan,
+  wheelZoom,
+} from "@/redux/slice/viewport";
 import { AppDispatch, useAppDispatch, useAppSelector } from "@/redux/store";
 import { useEffect, useRef, useState } from "react";
 
@@ -71,7 +78,7 @@ export const useInfiniteCanvas = () => {
       {
         x?: number;
         y?: number;
-        point?: Point[];
+        points?: Point[];
         startX?: number;
         startY?: number;
         endX?: number;
@@ -247,8 +254,133 @@ export const useInfiniteCanvas = () => {
     }
   };
 
-  return {
-    viewport,
-    dispatch,
+  //scroll
+  const onWheel = (e: WheelEvent) => {
+    e.preventDefault();
+    const originScreen = localPointFromClient(e.clientX, e.clientY);
+
+    if (e.ctrlKey || e.metaKey) {
+      dispatch(wheelZoom({ deltaY: e.deltaY, originScreen }));
+    } else {
+      const dx = e.shiftKey ? e.deltaY : e.deltaX;
+      const dy = e.shiftKey ? 0 : e.deltaY;
+      dispatch(wheelPan({ dx: -dx, dy: -dy }));
+    }
+  };
+
+  //onClick
+  const onPointerDown: React.PointerEventHandler<HTMLDivElement> = (e) => {
+    const target = e.target as HTMLElement;
+
+    const isButton =
+      target.tagName === "BUTTON" ||
+      target.closest("button") ||
+      target.classList.contains("pointer-events-auto") ||
+      target.closest(".pointer-events-auto");
+
+    if (!isButton) {
+      e.preventDefault();
+    } else {
+      return;
+    }
+
+    const local = getLocalPointFromPtr(e.nativeEvent);
+    const world = screenToWorld(local, viewport.translate, viewport.scale);
+
+    if (touchMapRef.current.size === 0) {
+      canvasRef.current?.setPointerCapture?.(e.pointerId);
+      const isPanButton = e.button === 1 || e.button === 2;
+      const panByShift = isSpacePressed.current && e.button === 0;
+
+      if (isPanButton || panByShift) {
+        const mode = isSpacePressed.current ? "shiftPanning" : "panning";
+        dispatch(panStart({ screen: local, mode }));
+        return;
+      }
+
+      if (e.button === 0) {
+        if (currentTool === "select") {
+          const hitShape = getShapeAtPoint(world);
+          if (hitShape) {
+            const isAlreadySelected = selectedShapes[hitShape.id];
+            if (!isAlreadySelected) {
+              if (!e.shiftKey) dispatch(clearSelection());
+              dispatch(selectShape(hitShape.id));
+            }
+            isMovingRef.current = true;
+            moveStartRef.current = world;
+
+            initialShapePositionsRef.current = {};
+            Object.keys(selectedShapes).forEach((id) => {
+              const shape = entityState.entities[id];
+              if (shape) {
+                if (
+                  shape.type === "rect" ||
+                  shape.type === "frame" ||
+                  shape.type === "ellipse" ||
+                  shape.type === "generatedui"
+                ) {
+                  initialShapePositionsRef.current[id] = {
+                    x: shape.x,
+                    y: shape.y,
+                  };
+                } else if (shape.type === "freedraw") {
+                  ////// something is wrong here
+                  initialShapePositionsRef.current[id] = {
+                    points: [...shape.points],
+                  };
+                } else if (shape.type === "arrow" || shape.type === "line") {
+                  initialShapePositionsRef.current[id] = {
+                    startX: shape.startX,
+                    startY: shape.startY,
+                    endX: shape.endX,
+                    endY: shape.endY,
+                  };
+                } else if (shape.type === "text") {
+                  initialShapePositionsRef.current[id] = {
+                    x: shape.x,
+                    y: shape.y,
+                  };
+                }
+              }
+            });
+
+            if (
+              hitShape.type === "frame" ||
+              hitShape.type === "rect" ||
+              hitShape.type === "ellipse" ||
+              hitShape.type === "generatedui"
+            ) {
+              initialShapePositionsRef.current[hitShape.id] = {
+                x: hitShape.x,
+                y: hitShape.y,
+              };
+            } else if (hitShape.type === "freedraw") {
+              initialShapePositionsRef.current[hitShape.id] = {
+                points: [...hitShape.points],
+              };
+            } else if (hitShape.type === "arrow" || hitShape.type === "line") {
+              initialShapePositionsRef.current[hitShape.id] = {
+                startX: hitShape.startX,
+                endX: hitShape.endX,
+                startY: hitShape.startY,
+                endY: hitShape.endY,
+              };
+            } else if (hitShape.type === "text") {
+              initialShapePositionsRef.current[hitShape.id] = {
+                x: hitShape.x,
+                y: hitShape.y,
+              };
+            }
+          } else {
+            // clicked on emtpy space
+            if (!e.shiftKey) {
+              dispatch(clearSelection());
+              blurActiveTextInput();
+            }
+          }
+        }
+      }
+    }
   };
 };
