@@ -1,4 +1,5 @@
 "use client";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -12,7 +13,8 @@ import { Toggle } from "@/components/ui/toggle";
 import { cn } from "@/lib/utils";
 import { TextShape, updateShape } from "@/redux/slice/shapes";
 import { useAppDispatch, useAppSelector } from "@/redux/store";
-import { Bold, Italic, Strikethrough, Underline } from "lucide-react";
+import { Bold, Italic, Palette, Strikethrough, Underline } from "lucide-react";
+import { useState } from "react";
 
 interface TextSidebarProps {
   isOpen: boolean;
@@ -23,6 +25,7 @@ export default function TextSidebar({ isOpen }: TextSidebarProps) {
 
   const selectedShapes = useAppSelector((s) => s.shapes.selected);
   const shapesEntities = useAppSelector((s) => s.shapes.shapes.entities);
+  const [colorInput, setColorInput] = useState<string>("");
 
   const selectedTextShape = Object.keys(selectedShapes)
     .map((id: any) => shapesEntities[id])
@@ -39,6 +42,13 @@ export default function TextSidebar({ isOpen }: TextSidebarProps) {
         },
       }),
     );
+  };
+
+  const handleColorChange = (color: string) => {
+    setColorInput(color);
+    if (/^#[0-9A-F]{6}$/i.test(color) || /^#[0-9A-F]{3}$/i.test(color)) {
+      updateTextProperty("fill", color);
+    }
   };
 
   //   if (!open || !selectedTextShape) return null;
@@ -151,6 +161,37 @@ export default function TextSidebar({ isOpen }: TextSidebarProps) {
             >
               <Strikethrough className="w-4 h-4" />
             </Toggle>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-white/80">
+              <Palette className="w-4 h-4" /> Color
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                type="color"
+                value={colorInput}
+                onChange={(e) => handleColorChange(e.target.value)}
+                className="bg-white/5 border border-white/10 text-white flex-1"
+                placeholder="#ffffff"
+              />
+              <div
+                className="w-10 h-10 rounded border border-white/20 cursor-pointer"
+                style={{
+                  backgroundColor: selectedTextShape?.fill || "#ffffff",
+                }}
+                onClick={() => {
+                  const input = document.createElement("input");
+                  input.type = "color";
+                  input.value = selectedTextShape?.fill || "ffffff";
+                  input.onchange = (e) => {
+                    const color = (e.target as HTMLInputElement).value;
+                    setColorInput(color);
+                    updateTextProperty("fill", color);
+                  };
+                  input.click();
+                }}
+              ></div>
+            </div>
           </div>
         </div>
       </div>
