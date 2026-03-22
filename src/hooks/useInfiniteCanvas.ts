@@ -117,8 +117,11 @@ export const useInfiniteCanvas = () => {
 
   //for animation
   const lastFreehandFrameRef = useRef(0);
+  //store requestAnimationFrameId for freeHand
   const freehandRafRef = useRef<number | null>(null);
+  //store requestAnimationFrameId for pan
   const panRafRef = useRef<number | null>(null);
+  //holds latest pan position that needs to be applied.
   const pendingPanPointRef = useRef<Point | null>(null);
 
   // updating refs
@@ -127,7 +130,8 @@ export const useInfiniteCanvas = () => {
     force((n: number) => (n + 1) | 0);
   };
 
-  //coordinate conversion -> sreen coods to canvas coords
+  //coordinate conversion = viwport coords -> canvas div coords
+  //   calculated relative to top left corner of viewport
   const localPointFromClient = (clientX: number, clientY: number): Point => {
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return { x: clientX, y: clientY };
@@ -149,7 +153,7 @@ export const useInfiniteCanvas = () => {
     return localPointFromClient(e.clientX, e.clientY);
   };
 
-  //collision detection related
+  //getting the top shape at a point
   const getShapeAtPoint = (worldPoint: Point): Shape | null => {
     for (let i = shapeList.length - 1; i >= 0; i--) {
       const shape = shapeList[i];
@@ -217,13 +221,17 @@ export const useInfiniteCanvas = () => {
     lineStart: Point,
     lineEnd: Point,
   ): number => {
-    const A = point.x - lineStart.x;
-    const B = point.y - lineStart.y;
-    const C = lineEnd.x - lineStart.x;
-    const D = lineEnd.y - lineStart.y;
+    const A = point.x - lineStart.x; // x component of vector from lineStart to point
+    const B = point.y - lineStart.y; // y component of vector from lineStart to point
+    const C = lineEnd.x - lineStart.x; // x component of vector from lineStart to lineEnd
+    const D = lineEnd.y - lineStart.y; // y component of vector from lineStart to lineEnd
 
+    //dot product will give the projection of  point on line
+    // there are two vectors here AA -> (A,B) and BB -> (C,D)
+    // dot product is given by sum of product of x components and y components of vectors
     const dot = A * C + B * D;
     const lenSquare = C * C + D * D;
+    // the param will give us the ratio from linestart to projection of point on line segment
     let param = -1;
     if (lenSquare !== 0) param = dot / lenSquare;
 
@@ -240,43 +248,65 @@ export const useInfiniteCanvas = () => {
       yy = lineStart.y + param * D;
     }
 
+    //relative distance bewteen line segment and point
     const dx = point.x - xx;
     const dy = point.y - yy;
     return Math.sqrt(dx * dx + dy * dy);
   };
 
   //performace optimisation and animation
-  //smooth panning
+
+  //the below function will reduce the number of dispatch to
+  //1 dispatch per frame for fast
   const schedulePanMove = (p: Point) => {
     pendingPanPointRef.current = p;
+    // if raf id already present early return
     if (panRafRef.current !== null) return;
 
+    // else get the rafId to throttle and only make this reff null
+    // when the next frame is schedule
+    // which will be done by callback
     panRafRef.current = window.requestAnimationFrame(() => {
       panRafRef.current = null;
       const next = pendingPanPointRef.current;
+      //dispatch throttled action
       if (next) dispatch(panMove(next));
     });
   };
 
-  //animation for freehand
+  // RAF throttle loop for freehand drawing
   const freehandTick = (): void => {
+    //more accurate than Date.now()
     const now = performance.now();
 
+    //lastFreehandFrameRef stores the last timestamp of the render
+    // if it was earlier than RAF_INTERVAL we trigger rerender
+    //if on a 60hz monitor this check is not necessay as the Tick function will run 60 times per second
+    //but for 144hz monitors this check is necessary to prevent too many renders
+    // basically this check will only work for monitor with more than 125hz refresh rate
     if (now - lastFreehandFrameRef.current >= RAF_INTERVAL_MS) {
+      //if there are any points in freeDrawPointsRef - render
       if (freeDrawPointsRef.current.length > 0) requestRender();
+      //latest timestamp of rendered frame
       lastFreehandFrameRef.current = now;
     }
 
+    //if user is still drawing start loop
     if (isDrawingRef.current) {
+      //freehandRafRef will have id of the last scheduled frame so we can cancel it if needed
+      // and also requestAnimationFrame will call the freehandTick callback to start rendering loop.
       freehandRafRef.current = window.requestAnimationFrame(freehandTick);
     }
   };
 
-  //scroll
+  //scroll event handler
   const onWheel = (e: WheelEvent) => {
     e.preventDefault();
     const originScreen = localPointFromClient(e.clientX, e.clientY);
 
+    console.log("dispatching wheel event");
+
+    //for zooming
     if (e.ctrlKey || e.metaKey) {
       dispatch(wheelZoom({ deltaY: e.deltaY, originScreen }));
     } else {
@@ -290,6 +320,8 @@ export const useInfiniteCanvas = () => {
   const onPointerDown: React.PointerEventHandler<HTMLDivElement> = (e) => {
     const target = e.target as HTMLElement;
 
+    //for clicking toolbar and other buttons that lives on canvas
+    // to prevent drawing while clicking on toolbar
     const isButton =
       target.tagName === "BUTTON" ||
       target.closest("button") ||
@@ -302,10 +334,16 @@ export const useInfiniteCanvas = () => {
       return;
     }
 
+    //local mouse position inside of a div
+    //nativeEvent is the raw Event of browser as react uses synthetic event
     const local = getLocalPointFromPtr(e.nativeEvent);
+    //coordinates inside infinite world of canvas
     const world = screenToWorld(local, viewport.translate, viewport.scale);
 
+    // if its the first finger on touchpad or first keydown on mouse
     if (touchMapRef.current.size === 0) {
+      //this locks the pointerevent to canvas evnen if pointer goes outside canvas
+      // and mouseUp event gets triggered outside the canvas that will still be captured inside canvas
       canvasRef.current?.setPointerCapture?.(e.pointerId);
       const isPanButton = e.button === 1 || e.button === 2;
       const panByShift = isSpacePressed.current && e.button === 0;
@@ -321,14 +359,24 @@ export const useInfiniteCanvas = () => {
           const hitShape = getShapeAtPoint(world);
           if (hitShape) {
             const isAlreadySelected = selectedShapes[hitShape.id];
+            // if the shape is not selected yet select it
             if (!isAlreadySelected) {
+              //clear already selected shapes if clicking new shape
+              // and only if shift is not pressed
               if (!e.shiftKey) dispatch(clearSelection());
               dispatch(selectShape(hitShape.id));
             }
+            // so this is so that it get handled in onPointer move
             isMovingRef.current = true;
+            // capture world coordinates when move starts
             moveStartRef.current = world;
 
+            //why this is created as the delta -> which is the distace shapes has moved
+            // should be calulated with the initial position of the shapes
+            // not the current posistion as on  drag the current position keeps changing
+            // so this initial position is only created when pointer down event happens on a shape
             initialShapePositionsRef.current = {};
+            // snapshotting all the selected shapes positions
             Object.keys(selectedShapes).forEach((id) => {
               const shape = entityState.entities[id];
               if (shape) {
@@ -343,7 +391,6 @@ export const useInfiniteCanvas = () => {
                     y: shape.y,
                   };
                 } else if (shape.type === "freedraw") {
-                  ////// something is wrong here
                   initialShapePositionsRef.current[id] = {
                     points: [...shape.points],
                   };
@@ -363,6 +410,11 @@ export const useInfiniteCanvas = () => {
               }
             });
 
+            //now snapshotting the hitshape
+            //this look redundant but there is a subtle reason for it
+            // on dispatching the new selected shape in will update the redux and its selected shape slice
+            // but this current closure will not have the updated data of this new shape
+            // so to include this new shape in the snapshot, we need to do it here
             if (
               hitShape.type === "frame" ||
               hitShape.type === "rect" ||
@@ -871,6 +923,7 @@ export const useInfiniteCanvas = () => {
 
   // connecting hook to actual dom
   const attachCanvasRef = (ref: HTMLDivElement | null): void => {
+    console.log("ref attached", ref);
     // clean up any existing event listeners on the old canvas
     if (canvasRef.current) {
       canvasRef.current.removeEventListener("wheel", onWheel);
@@ -880,7 +933,8 @@ export const useInfiniteCanvas = () => {
 
     // add wheel event listeners to new canvas
     if (ref) {
-      ref.addEventListener("wheel", onWheel, { passive: false });
+      console.log("attaching wheel event");
+      ref.addEventListener("wheel", onWheel, { passive: false, capture: true });
     }
   };
 
