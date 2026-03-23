@@ -32,9 +32,5 @@ export default function ShapeRenderer({
       return <Stroke shape={shape} />;
     case "arrow":
       return <Arrow shape={shape} />;
-    case "line":
-      return <Line shape={shape} />;
-    case "text":
-      return <Text shape={shape} />;
   }
 }
