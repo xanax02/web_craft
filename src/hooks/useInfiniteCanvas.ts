@@ -76,7 +76,7 @@ export const useInfiniteCanvas = () => {
 
   //canvas reference
   const canvasRef = useRef<HTMLDivElement | null>(null);
-  //dom element reference
+
   const touchMapRef = useRef<Map<number, TouchPointer>>(new Map());
   //draft shape reference
   const draftShapeRef = useRef<DraftShap | null>(null);
@@ -115,7 +115,7 @@ export const useInfiniteCanvas = () => {
     startPoint: { x: number; y: number };
   } | null>(null);
 
-  //for animation
+  //stores the time stamp of last freehand frame
   const lastFreehandFrameRef = useRef(0);
   //store requestAnimationFrameId for freeHand
   const freehandRafRef = useRef<number | null>(null);
@@ -304,8 +304,6 @@ export const useInfiniteCanvas = () => {
     e.preventDefault();
     const originScreen = localPointFromClient(e.clientX, e.clientY);
 
-    console.log("dispatching wheel event");
-
     //for zooming
     if (e.ctrlKey || e.metaKey) {
       dispatch(wheelZoom({ deltaY: e.deltaY, originScreen }));
@@ -340,8 +338,8 @@ export const useInfiniteCanvas = () => {
     //coordinates inside infinite world of canvas
     const world = screenToWorld(local, viewport.translate, viewport.scale);
 
-    // if its the first finger on touchpad or first keydown on mouse
-    if (touchMapRef.current.size === 0) {
+    //
+    if (touchMapRef.current.size <= 1) {
       //this locks the pointerevent to canvas evnen if pointer goes outside canvas
       // and mouseUp event gets triggered outside the canvas that will still be captured inside canvas
       canvasRef.current?.setPointerCapture?.(e.pointerId);
@@ -948,7 +946,6 @@ export const useInfiniteCanvas = () => {
 
   // connecting hook to actual dom
   const attachCanvasRef = (ref: HTMLDivElement | null): void => {
-    console.log("ref attached", ref);
     // clean up any existing event listeners on the old canvas
     if (canvasRef.current) {
       canvasRef.current.removeEventListener("wheel", onWheel);
@@ -958,8 +955,7 @@ export const useInfiniteCanvas = () => {
 
     // add wheel event listeners to new canvas
     if (ref) {
-      console.log("attaching wheel event");
-      ref.addEventListener("wheel", onWheel, { passive: false, capture: true });
+      ref.addEventListener("wheel", onWheel, { passive: false });
     }
   };
 

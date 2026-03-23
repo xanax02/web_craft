@@ -325,6 +325,7 @@ const shapesSlice = createSlice({
       shapesAdapter.addOne(state.shapes, makeFrame(frameWithNumber));
     },
     addRect(state, action: PayloadAction<Parameters<typeof makeRect>[0]>) {
+      console.log("makeRect", makeRect(action.payload));
       shapesAdapter.addOne(state.shapes, makeRect(action.payload));
     },
     addEllipse(

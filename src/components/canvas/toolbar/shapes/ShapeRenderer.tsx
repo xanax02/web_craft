@@ -8,10 +8,10 @@ import { Text } from "./text";
 
 type Props = {
   shape: any;
-  toggleInspiration: () => void;
-  toggleChat: (generatedUUId: string) => void;
-  generateWorkflow: (generatedUUId: string) => void;
-  exportDesign: (generatedUUId: string, element: HTMLElement | null) => void;
+  toggleInspiration?: () => void;
+  toggleChat?: (generatedUUId: string) => void;
+  generateWorkflow?: (generatedUUId: string) => void;
+  exportDesign?: (generatedUUId: string, element: HTMLElement | null) => void;
 };
 
 export default function ShapeRenderer({
@@ -21,9 +21,9 @@ export default function ShapeRenderer({
   generateWorkflow,
   exportDesign,
 }: Props) {
-  switch (shape) {
-    case "frame":
-      return <Frame shape={shape} toggleInspiration={toggleInspiration} />;
+  switch (shape.type) {
+    // case "frame":
+    //   return <Frame shape={shape} toggleInspiration={toggleInspiration} />;
     case "rect":
       return <Rectangle shape={shape} />;
     case "ellipse":
@@ -32,5 +32,9 @@ export default function ShapeRenderer({
       return <Stroke shape={shape} />;
     case "arrow":
       return <Arrow shape={shape} />;
+    case "line":
+      return <Line shape={shape} />;
+    case "text":
+      return <Text shape={shape} />;
   }
 }

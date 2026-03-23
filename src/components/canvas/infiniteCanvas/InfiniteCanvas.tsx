@@ -27,18 +27,18 @@ export default function InfiniteCanvas() {
       <TextSidebar isOpen={isSidebarOpen && hasSelectedText} />
 
       <div
-        ref={attachCanvasRef as any}
+        ref={attachCanvasRef}
         role="application"
         aria-label="Infinite drawing canvas"
         className={cn(
-          "relative w-full h-full overflow-hidden select-none z-0",
+          "relative w-full h-screen overflow-hidden select-none z-0",
           {
             "cursor-grabbing": viewport.mode === "panning",
             "cursor-grab": viewport.mode === "shiftPanning",
             "cursor-crosshair":
               currentTool !== "select" && viewport.mode === "idle",
             "cursor-default":
-              currentTool === "select" || viewport.mode === "idle",
+              currentTool === "select" && viewport.mode === "idle",
           },
         )}
         style={{ touchAction: "none" }}
@@ -57,16 +57,16 @@ export default function InfiniteCanvas() {
             willChange: "transform",
           }}
         >
-          {/* {shapes.map((shape) => (
+          {shapes.map((shape) => (
             <ShapeRenderer
               key={shape.id}
               shape={shape}
-              toggleInspiration={toggleInspiration}
-              toggleChat={toggleChat}
-              generateWorkflow={generateWorkflow}
-              exportDesign={exportDesign}
+              //   toggleInspiration={toggleInspiration}
+              //   toggleChat={toggleChat}
+              //   generateWorkflow={generateWorkflow}
+              //   exportDesign={exportDesign}
             />
-          ))} */}
+          ))}
         </div>
       </div>
     </>

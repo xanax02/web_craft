@@ -21,7 +21,8 @@ export const Stroke = ({ shape }: { shape: FreeDrawShape }) => {
         width: width + pad * 2,
         height: height + pad * 2,
       }}
-      aria-hidden>
+      aria-hidden
+    >
       <polyline
         points={dPts}
         fill={fill ?? "none"}
