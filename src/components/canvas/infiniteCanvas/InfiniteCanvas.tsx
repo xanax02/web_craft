@@ -4,6 +4,13 @@ import { useInfiniteCanvas } from "@/hooks/useInfiniteCanvas";
 import TextSidebar from "../textSidebar/TextSidebar";
 import { cn } from "@/lib/utils";
 import ShapeRenderer from "../toolbar/shapes/ShapeRenderer";
+import { RectanglePreview } from "../toolbar/shapes/rectangle/preview";
+import { FramePreview } from "../toolbar/shapes/frame/preview";
+import { ElipsePreview } from "../toolbar/shapes/elipse/preview";
+import { ArrowPreview } from "../toolbar/shapes/arrow/preview";
+import { LinePreview } from "../toolbar/shapes/line/preview";
+import { FreeDrawStrokePreview } from "../toolbar/shapes/stroke/preview";
+import { SelectionOverlay } from "../toolbar/shapes/selection/SelectionOverlay";
 
 export default function InfiniteCanvas() {
   const {
@@ -21,6 +28,9 @@ export default function InfiniteCanvas() {
     isSidebarOpen,
     hasSelectedText,
   } = useInfiniteCanvas();
+
+  const draftShape = getDraftShape();
+  const freeDrawPoints = getFreeDrawPoints();
 
   return (
     <>
@@ -67,6 +77,48 @@ export default function InfiniteCanvas() {
               //   exportDesign={exportDesign}
             />
           ))}
+
+          {shapes.map((shape) => (
+            <SelectionOverlay
+              key={`selected-${shape.id}`}
+              shape={shape}
+              isSelected={selectedShapes[shape.id]}
+            />
+          ))}
+
+          {draftShape && draftShape.type === "frame" && (
+            <FramePreview
+              startWorld={draftShape.startWorld}
+              currentWorld={draftShape.currentWorld}
+            />
+          )}
+          {draftShape && draftShape.type === "rect" && (
+            <RectanglePreview
+              startWorld={draftShape.startWorld}
+              currentWorld={draftShape.currentWorld}
+            />
+          )}
+          {draftShape && draftShape.type === "ellipse" && (
+            <ElipsePreview
+              startWorld={draftShape.startWorld}
+              currentWorld={draftShape.currentWorld}
+            />
+          )}
+          {draftShape && draftShape.type === "arrow" && (
+            <ArrowPreview
+              startWorld={draftShape.startWorld}
+              currentWorld={draftShape.currentWorld}
+            />
+          )}
+          {draftShape && draftShape.type === "line" && (
+            <LinePreview
+              startWorld={draftShape.startWorld}
+              currentWorld={draftShape.currentWorld}
+            />
+          )}
+          {currentTool === "freedraw" && freeDrawPoints?.length > 1 && (
+            <FreeDrawStrokePreview points={freeDrawPoints} />
+          )}
         </div>
       </div>
     </>
