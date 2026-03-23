@@ -1,3 +1,11 @@
+import { Arrow } from "./arrow";
+import { Elipse } from "./elipse";
+import { Frame } from "./frame";
+import { Line } from "./line";
+import { Rectangle } from "./rectangle";
+import { Stroke } from "./stroke";
+import { Text } from "./text";
+
 type Props = {
   shape: any;
   toggleInspiration: () => void;
@@ -19,13 +27,13 @@ export default function ShapeRenderer({
     case "rect":
       return <Rectangle shape={shape} />;
     case "ellipse":
-      return <Ellipse shape={shape} />;
+      return <Elipse shape={shape} />;
     case "freedraw":
       return <Stroke shape={shape} />;
     case "arrow":
       return <Arrow shape={shape} />;
     case "line":
-      return <Line shpe={shape} />;
+      return <Line shape={shape} />;
     case "text":
       return <Text shape={shape} />;
   }
