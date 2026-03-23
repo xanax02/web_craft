@@ -355,6 +355,11 @@ export const useInfiniteCanvas = () => {
       }
 
       if (e.button === 0) {
+        // if the tool is 'select' then run selection logic
+        // that includes adding the hit shape (shape that is under or near pointer)
+        // in redux shape slice selected array
+        // and snapshotting the current positions of these selected shapes in case user wants to move them.
+        // this will also store coords of world at which pointer down event happened in moveStartRef
         if (currentTool === "select") {
           const hitShape = getShapeAtPoint(world);
           if (hitShape) {
@@ -444,17 +449,27 @@ export const useInfiniteCanvas = () => {
             }
           } else {
             // clicked on emtpy space
+            //clear the selected array
+            // and blur any active text input
             if (!e.shiftKey) {
               dispatch(clearSelection());
               blurActiveTextInput();
             }
           }
         } else if (currentTool === "eraser") {
+          // bool for erasing this indicates erasing has started
           isErasingRef.current = true;
+          //erasedShapesRef is a set of strings to store ids of shapes
+          // that have been deleted in current erase gesture.
+          // clear it to have the current gesture erased shapes.
           erasedShapesRef.current.clear();
 
           const hitShape = getShapeAtPoint(world);
           if (hitShape) {
+            // this dispatch logic was added by me if in future bug came try removing this
+            //
+            //what its doing is -> it is removing the shape that is under pointer
+            dispatch(removeShape(hitShape.id));
             erasedShapesRef.current.add(hitShape.id);
           } else {
             blurActiveTextInput();
@@ -463,6 +478,8 @@ export const useInfiniteCanvas = () => {
           dispatch(addText({ x: world.x, y: world.y }));
           dispatch(setTool("select"));
         } else {
+          // if current tool is for drawing the below figures
+          // on pointer watches isDrawingRef so for drawing with drag it is set true
           isDrawingRef.current = true;
           if (
             currentTool === "rect" ||
@@ -473,14 +490,22 @@ export const useInfiniteCanvas = () => {
           ) {
             console.log("starting to draw:", currentTool, "at", world);
             draftShapeRef.current = {
-              type: currentTool,
-              startWorld: world,
-              currentWorld: world,
+              type: currentTool, // current shape
+              startWorld: world, //when user clicked -> anchor point
+              currentWorld: world, // where pointer is currently -> keeps on updating on every move
             };
+            // so that this comp gets render and in the draft shape preview, gets the updated data
+            // that can only happen if react re- renders other wise the draftshape data will only remain
+            // here.
             requestRender();
+            // the above have also be optimzed like freedraw
           } else if (currentTool === "freedraw") {
+            //for freehand every point is required when pointer moves
+            // so storing that data in array
             freeDrawPointsRef.current = [world];
+            //this stores the last freehand frame time to for throllting in freehandTick
             lastFreehandFrameRef.current = performance.now();
+            // this will start the freehandTick loop till isDrawing is true
             freehandRafRef.current = window.requestAnimationFrame(freehandTick);
             requestRender();
           }

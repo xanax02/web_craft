@@ -13,5 +13,20 @@ export default function ShapeRenderer({
   generateWorkflow,
   exportDesign,
 }: Props) {
-  return <div>asdl;kfjsdf</div>;
+  switch (shape) {
+    case "frame":
+      return <Frame shape={shape} toggleInspiration={toggleInspiration} />;
+    case "rect":
+      return <Rectangle shape={shape} />;
+    case "ellipse":
+      return <Ellipse shape={shape} />;
+    case "freedraw":
+      return <Stroke shape={shape} />;
+    case "arrow":
+      return <Arrow shape={shape} />;
+    case "line":
+      return <Line shpe={shape} />;
+    case "text":
+      return <Text shape={shape} />;
+  }
 }
