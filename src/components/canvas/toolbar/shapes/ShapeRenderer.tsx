@@ -16,14 +16,14 @@ type Props = {
 
 export default function ShapeRenderer({
   shape,
-  toggleInspiration,
+  toggleInspiration = () => {},
   toggleChat,
   generateWorkflow,
   exportDesign,
 }: Props) {
   switch (shape.type) {
-    // case "frame":
-    //   return <Frame shape={shape} toggleInspiration={toggleInspiration} />;
+    case "frame":
+      return <Frame shape={shape} toggleInspiration={toggleInspiration} />;
     case "rect":
       return <Rectangle shape={shape} />;
     case "ellipse":
