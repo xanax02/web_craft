@@ -123,3 +123,34 @@ export const getProjectStyleGuide = query({
     return project.styleGuide ? JSON.parse(project.styleGuide) : null;
   },
 });
+
+export const updateProjectSketches = mutation({
+  args: {
+    projectId: v.id("projects"),
+    sketchesData: v.any(),
+    viewportData: v.optional(v.any()),
+  },
+  handler: async (ctx, { projectId, sketchesData, viewportData }) => {
+    const user = await getAuthUserId(ctx);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const project = await ctx.db.get(projectId);
+    if (!project) {
+      throw new Error("Project not found");
+    }
+
+    const updateData: any = {
+      sketchesData,
+      lastModified: new Date(),
+    };
+
+    if (viewportData) {
+      updateData.viewportData = viewportData;
+    }
+
+    await ctx.db.patch(projectId, updateData);
+    return { success: true };
+  },
+});
