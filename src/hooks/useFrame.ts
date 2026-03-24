@@ -208,6 +208,34 @@ const generateFrameSnapshot = async (
   shapesInFrame.forEach((shape) => {
     renderShapeOnCanvas(ctx, shape, frame.x, frame.y);
   });
+  ctx.restore();
+  console.log("All shapes rendered");
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          resolve(blob);
+        } else {
+          reject(new Error("Failed to generate snapshot"));
+        }
+      },
+      "image/png",
+      1.0,
+    );
+  });
+};
+
+//downlod util
+const downloadBlob = (blob: Blob, filename: string) => {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 };
 
 //frame -> snapshot(image) -> ai api -> generateUI
@@ -225,6 +253,18 @@ export const useFrame = (shape: FrameShape) => {
     try {
       setIsGenerating(true);
       const snapshot = await generateFrameSnapshot(shape, allShapes);
+      downloadBlob(snapshot, `frame-${shape.frameNumber}-snapshot.png`);
+
+      const formData = new FormData();
+      formData.append("image", snapshot, `frame-${shape.frameNumber}.png`);
+      formData.append("frameNumber", shape.frameNumber.toString());
+
+      const urlParams = new URLSearchParams();
+      const projectId = urlParams.get("project");
+
+      if (projectId) {
+        formData.append("projectId", projectId);
+      }
     } catch (error) {
     } finally {
       setIsGenerating(false);
