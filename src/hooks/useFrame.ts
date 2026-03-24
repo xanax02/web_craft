@@ -101,9 +101,10 @@ const renderShapeOnCanvas = (
         ctx.lineWidth = shape.strokeWidth || 2;
 
         const borderRadius = shape.type === "rect" ? 8 : 0;
-        ctx.beginPath();
-        ctx.roundRect(relativeX, relativeY, shape.w, shape.h, borderRadius);
-        ctx.stroke();
+        ctx.beginPath(); //ctx have list of line segments and curves so this clears drawing state
+        // below is one of the path creation method
+        ctx.roundRect(relativeX, relativeY, shape.w, shape.h, borderRadius); //adds a path for rectangle to current drawing state, it only defines the geometry
+        ctx.stroke(); //the above is just defining the shape, this actually draws it
       } else if (shape.type === "ellipse") {
         ctx.strokeStyle =
           shape.stroke && shape.stroke !== "transparent"
@@ -116,9 +117,9 @@ const renderShapeOnCanvas = (
           relativeY + shape.h / 2,
           shape.w / 2,
           shape.h / 2,
-          0,
-          0,
-          2 * Math.PI,
+          0, // rotation (in radians)
+          0, // start angle (in radians)
+          2 * Math.PI, // end angle (in radians)
         );
         ctx.stroke();
       }
@@ -128,26 +129,28 @@ const renderShapeOnCanvas = (
       const textRelativeY = shape.y - frameY;
       ctx.fillStyle = shape.fill || "#ffffff";
       ctx.font = `${shape.fontSize || 16}px ${shape.fontFamily || "Inter, sans-serif"}`;
-      ctx.fillText(shape.text || "", textRelativeX, textRelativeY);
+      ctx.fillText(shape.text || "", textRelativeX, textRelativeY); // this immediatly draws the text no need for ctx.stroke()
       break;
     case "freedraw":
       if (shape.points.length > 1) {
-        ctx.strokeStyle = shape.stroke || "ffffff";
+        ctx.strokeStyle = shape.stroke || "#ffffff";
         ctx.lineWidth = shape.strokeWidth || 2;
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
+        //controls how ends of lines look
+        ctx.lineCap = "round"; //gives smooth rounded tips
+        // controls how corners are joined
+        ctx.lineJoin = "round"; //prevent sharp spiky joins
         ctx.beginPath();
         const firstPoint = shape.points[0];
-        ctx.moveTo(firstPoint.x - frameX, firstPoint.y - frameY);
+        ctx.moveTo(firstPoint.x - frameX, firstPoint.y - frameY); //lifts the pen and places it to a position without drawing
         for (let i = 1; i < shape.points.length; i++) {
           const point = shape.points[i];
-          ctx.lineTo(point.x - frameX, point.y - frameY);
+          ctx.lineTo(point.x - frameX, point.y - frameY); // adds a straight line segment
         }
         ctx.stroke();
       }
       break;
     case "line":
-      ctx.strokeStyle = shape.stroke || "ffffff";
+      ctx.strokeStyle = shape.stroke || "#ffffff";
       ctx.lineWidth = shape.strokeWidth || 2;
       ctx.beginPath();
       ctx.moveTo(shape.startX - frameX, shape.startY - frameY);
@@ -164,6 +167,7 @@ const renderShapeOnCanvas = (
 
       const headLength = 10;
       const angle = Math.atan2(
+        //creates angle of arrowhead (in radian) , y coord comes first
         shape.endY - shape.startY,
         shape.endX - shape.startX,
       );
@@ -203,13 +207,11 @@ const generateFrameSnapshot = async (
 
   ctx.fillStyle = "#000000";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.clip();
+  // ctx.clip();
 
   shapesInFrame.forEach((shape) => {
     renderShapeOnCanvas(ctx, shape, frame.x, frame.y);
   });
-  ctx.restore();
-  console.log("All shapes rendered");
 
   return new Promise((resolve, reject) => {
     canvas.toBlob(

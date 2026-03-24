@@ -24,6 +24,7 @@ interface AutosaveProjectResponse {
 export const ProjectApi = createApi({
   reducerPath: "projectApi",
   baseQuery: fetchBaseQuery({ baseUrl: "/api/project" }),
+  tagTypes: ["Project"],
   endpoints: (builder) => ({
     autosaveProject: builder.mutation<
       AutosaveProjectResponse,
@@ -34,6 +35,9 @@ export const ProjectApi = createApi({
         method: "PATCH",
         body: data,
       }),
+      invalidatesTags: ["Project"],
     }),
   }),
 });
+
+export const { useAutosaveProjectMutation } = ProjectApi;

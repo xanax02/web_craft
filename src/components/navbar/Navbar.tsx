@@ -9,6 +9,7 @@ import { Button } from "../ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { useAppSelector } from "@/redux/store";
 import CreateProjectButton from "../creativeButtons/project/CreateProjectButton";
+import Autosave from "../canvas/autosave/Autosave";
 
 type TabProps = {
   lable: string;
@@ -55,14 +56,14 @@ export default function Navbar() {
         </Link>
         {!hasCanvas ||
           (!hasStyleGuide && (
-            <div className="lg:inline-block hidden rounded-full text-primary/60 border border-white/[0.12] backdrop-blur-xl bg-white/[0.08] px-4 text-sm">
+            <div className="lg:inline-block hidden rounded-full text-white/80 border border-white/12 backdrop-blur-xl bg-white/8 px-4 text-sm">
               Project / {project?.name}
             </div>
           ))}
       </div>
 
       <div className="lg:flex hidden items-center justify-center gap-2">
-        <div className="flex items-center gap-2 backdrop-blur-xl bg-white/[0.08] border border-white/[0.12] rounded-full p-2">
+        <div className="flex items-center gap-2 backdrop-blur-xl bg-white/8 border border-white/12 rounded-full p-2">
           {tabs.map((tab) => (
             <Link
               href={tab.href}
@@ -70,8 +71,8 @@ export default function Navbar() {
               className={[
                 "group inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm transition",
                 `${pathName}?project=${projectId}` === tab.href
-                  ? "bg-white/[0.12] text-white border border-white/[0.16] backdrop-blur-sm"
-                  : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.06] border border-transparent",
+                  ? "bg-white/12 text-white border border-white/16 backdrop-blur-sm"
+                  : "text-zinc-400 hover:text-zinc-200 hover:bg-white/6 border border-transparent",
               ].join(" ")}
             >
               <span
@@ -92,7 +93,7 @@ export default function Navbar() {
         <span className="text-sm text-white/50">TDOD: Credits</span>
         <Button
           variant="secondary"
-          className="rounded-full h-12 w-12 flex items-center justify-center backdrop-blur-xl bg-white/[0.08] border border-white/[0.12] hover:bg-white/[0.12]"
+          className="rounded-full h-12 w-12 flex items-center justify-center backdrop-blur-xl bg-white/8 border border-white/12 hover:bg-white/12"
         >
           <CircleQuestionMark className="size-5 text-white" />
         </Button>
@@ -102,7 +103,8 @@ export default function Navbar() {
             <User className="size-5 text-black" />
           </AvatarFallback>
         </Avatar>
-        <CreateProjectButton />
+        {hasCanvas && <Autosave />}
+        {!hasCanvas && !hasStyleGuide && <CreateProjectButton />}
       </div>
     </div>
   );
