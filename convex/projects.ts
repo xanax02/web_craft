@@ -131,10 +131,8 @@ export const updateProjectSketches = mutation({
     viewportData: v.optional(v.any()),
   },
   handler: async (ctx, { projectId, sketchesData, viewportData }) => {
-    const user = await getAuthUserId(ctx);
-    if (!user) {
-      throw new Error("User not found");
-    }
+    //ingest function runs on server without user auth context
+    // so no need to check user for this function
 
     const project = await ctx.db.get(projectId);
     if (!project) {
@@ -142,8 +140,8 @@ export const updateProjectSketches = mutation({
     }
 
     const updateData: any = {
-      sketchesData,
-      lastModified: new Date(),
+      sketchData: sketchesData,
+      lastModified: Date.now(),
     };
 
     if (viewportData) {

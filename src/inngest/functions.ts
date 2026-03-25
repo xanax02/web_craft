@@ -12,7 +12,7 @@ export const testFn = inngest.createFunction(
 
 export const autosaveProjectWorkflow = inngest.createFunction(
   { id: "autsave-project-workflow" },
-  { event: "project/autsave.requested" },
+  { event: "project/autosave.requested" },
   async ({ event }) => {
     const { projectId, shapesData, viewportData } = event.data;
     try {

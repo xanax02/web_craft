@@ -103,7 +103,7 @@ export default function Navbar() {
             <User className="size-5 text-black" />
           </AvatarFallback>
         </Avatar>
-        {/* {hasCanvas && <Autosave />} */}
+        {hasCanvas && <Autosave />}
         {!hasCanvas && !hasStyleGuide && <CreateProjectButton />}
       </div>
     </div>

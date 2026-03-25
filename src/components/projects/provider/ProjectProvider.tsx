@@ -15,9 +15,12 @@ export default function ProjectProvider({
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-    if (initialProject?._valueJSON?.sketchesData) {
+    // schema had a type of sketchData instead on sketch data
+    // so there will be places where for server data it will be sketchData
+    // and for client it will be sketchesData
+    if (initialProject?._valueJSON?.sketchData) {
       const projectData = initialProject._valueJSON;
-      dispatch(loadProject(projectData.sketchesData));
+      dispatch(loadProject(projectData.sketchData));
 
       if (projectData.viewportData) {
         dispatch(restoreViewport(projectData.viewportData));
