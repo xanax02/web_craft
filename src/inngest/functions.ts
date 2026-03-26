@@ -8,6 +8,7 @@ import {
   PolarOrder,
   PolarSubsription,
   ReceivedEvent,
+  toMs,
 } from "@/types/polar";
 import { Id } from "../../convex/_generated/dataModel";
 
@@ -85,9 +86,105 @@ export const handlePolarEvent = inngest.createFunction(
 
             console.log("[Inngest] Found user by email:", foundUserId);
             return foundUserId;
-          } catch (error) {}
+          } catch (error) {
+            console.error("[Inngest] Error looking up user by email:", error);
+            return null;
+          }
         }
+        console.log("[Inngest] No user found for Polar event");
+        return null;
       },
     );
+    console.log("[Inngest] Resolved user ID:", userId);
+    if (!userId) {
+      console.log("[Inngest] No user ID found, skipping subscription update");
+      return;
+    }
+
+    const polarSubsriptionId = sub?.id ?? order?.subscription_id ?? null;
+    console.log("[Inngest] Polar subscription ID:", polarSubsriptionId);
+
+    if (!polarSubsriptionId) {
+      console.log(
+        "[Inngest] No Polar subscription ID found, skipping subscription update",
+      );
+      return;
+    }
+
+    const currentPeriodEnd = toMs(sub?.current_period_end);
+
+    const payload = {
+      userId,
+      polarSubsriptionId,
+      polarCutomerId:
+        sub?.customer?.id ?? sub?.customer_id ?? order?.customer_id ?? "",
+      productId: sub?.product_id ?? sub?.product?.id ?? undefined,
+      priceId: sub?.prices?.[0]?.id ?? undefined,
+      planCode: sub?.plan_code ?? sub?.product?.name ?? undefined,
+      status: sub?.status ?? "updated",
+      currentPeriodEnd,
+      trialEndsAt: toMs(sub?.trail_ends_at),
+      cancelAt: toMs(sub?.cancel_at),
+      canceledAt: toMs(sub?.canceled_at),
+      seats: sub?.seats ?? undefined,
+      metadata: dataUnknown,
+      creditsGrantPerPeriod: 10,
+      creditsRolloverLimit: 100,
+    };
+
+    console.log(
+      "[Inngest] subscription payload",
+      JSON.stringify(payload, null, 2),
+    );
+
+    const subscriptionId = await step.run("update-subscription", async () => {
+      try {
+        console.log("[Inngest] Upserting subscription to convex...");
+        console.log("[Inngest] checking for existing subscription...");
+
+        const existingByPolar = await fetchQuery(
+          api.subscription.getPolarById,
+          {
+            polarSubscriptionId: payload.sub,
+          },
+        );
+        console.log("[Inngest] Existing subscription:", existingByPolar);
+
+        const existingByUser = await fetchQuery(
+          api.subscription.getSubscriptionForUser,
+          {
+            userId: payload?.userId,
+          },
+        );
+
+        console.log("[Inngest] Existing subscription by user:", existingByUser);
+
+        if (existingByPolar && existingByUser) {
+          console.warn("[Inngest] duplicate detected: ");
+          console.log(" - BY polar id", existingByPolar._id);
+          console.log(" - BY user id", existingByUser._id);
+        }
+
+        const result = await fetchMutation(
+          api.subscription.upsertFromPolar,
+          payload,
+        );
+
+        return result;
+        // if (existingByPolar) {
+        //   console.log("[Inngest] Updating existing subscription...");
+        //   await fetchMutation(api.subscription.update, {
+        //     id: existingByPolar._id,
+        //     ...payload,
+        //   });
+        // } else {
+        //   console.log("[Inngest] Creating new subscription...");
+        //   await fetchMutation(api.subscription.create, payload);
+        // }
+      } catch (error) {
+        console.error("[Inngest] Error upserting subscription:", error);
+        throw error;
+      }
+    });
   },
 );

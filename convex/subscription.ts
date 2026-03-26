@@ -1,5 +1,8 @@
 import { v } from "convex/values";
-import { query } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
+
+const DEFAULT_GRANT = 10;
+const DEFAULT_ROLLOVER = 100;
 
 export const hasEntitlement = query({
   args: { userId: v.id("users") },
@@ -16,5 +19,136 @@ export const hasEntitlement = query({
       }
     }
     return false;
+  },
+});
+
+export const getPolarById = query({
+  args: { polarSubscriptionId: v.string() },
+  handler: async (ctx, { polarSubscriptionId }) => {
+    return await ctx.db
+      .query("subscriptions")
+      .withIndex("by_polarSubscriptionId", (q) =>
+        q.eq("polarSubscriptionId", polarSubscriptionId),
+      )
+      .first();
+  },
+});
+
+export const getSubscriptionForUser = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    return await ctx.db
+      .query("subscriptions")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .first();
+  },
+});
+
+export const upsertByPolar = mutation({
+  args: {
+    userId: v.id("users"),
+    polarSubsriptionId: v.string(),
+    polarCutomerId: v.string(),
+    productId: v.optional(v.string()),
+    priceId: v.optional(v.string()),
+    planCode: v.optional(v.string()),
+    status: v.string(),
+    currentPeriodEnd: v.optional(v.number()),
+    trialEndsAt: v.optional(v.number()),
+    cancelAt: v.optional(v.number()),
+    canceledAt: v.optional(v.number()),
+    seats: v.optional(v.number()),
+    metadata: v.optional(v.any()),
+    creditsGrantPerPeriod: v.optional(v.number()),
+    creditsRolloverLimit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const existingByPolar = await ctx.db
+      .query("subscriptions")
+      .withIndex("by_polarSubscriptionId", (q) =>
+        q.eq("polarSubscriptionId", args.polarSubsriptionId),
+      )
+      .first();
+
+    const existingByUser = await ctx.db
+      .query("subscriptions")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .first();
+
+    const base = {
+      userId: args.userId,
+      polarSubscriptionId: args.polarSubsriptionId,
+      polarCustomerId: args.polarCutomerId,
+      productId: args.productId,
+      priceId: args.priceId,
+      planCode: args.planCode,
+      status: args.status,
+      currentPeriodEnd: args.currentPeriodEnd,
+      trialEndsAt: args.trialEndsAt,
+      cancelAt: args.cancelAt,
+      canceledAt: args.canceledAt,
+      seats: args.seats,
+      metadata: args.metadata,
+      cerditsGrantPerPeriod:
+        args.creditsGrantPerPeriod ??
+        existingByPolar?.cerditsGrantPerPeriod ??
+        existingByUser?.cerditsGrantPerPeriod ??
+        DEFAULT_GRANT,
+      creditsRolloverLimit:
+        args.creditsRolloverLimit ??
+        existingByPolar?.creditsRolloverLimit ??
+        existingByUser?.creditsRolloverLimit ??
+        DEFAULT_ROLLOVER,
+    };
+
+    if (existingByPolar) {
+      if (existingByPolar.userId === args.userId) {
+        await ctx.db.patch(existingByPolar._id, base);
+        return existingByPolar._id;
+      } else {
+        const existingSubscription = await ctx.db
+          .query("subscriptions")
+          .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+          .first();
+        if (existingSubscription) {
+          const preservedData = {
+            creditsBalance: existingSubscription.creditBalance,
+            lastGrantCursor: existingSubscription.lastGrantCursor,
+          };
+          await ctx.db.patch(existingSubscription._id, {
+            ...base,
+            ...preservedData,
+          });
+
+          return existingSubscription._id;
+        } else {
+          const newId = await ctx.db.insert("subscriptions", {
+            ...base,
+            creditBalance: 0,
+            lastGrantCursor: undefined,
+          });
+          return newId;
+        }
+      }
+    }
+
+    if (existingByUser) {
+      const preservedData = {
+        creditsBalance: existingByUser.creditBalance,
+        lastGrantCursor: existingByUser.lastGrantCursor,
+      };
+      await ctx.db.patch(existingByUser._id, {
+        ...base,
+        ...preservedData,
+      });
+
+      const newId = await ctx.db.insert("subscriptions", {
+        ...base,
+        creditBalance: 0,
+        lastGrantCursor: undefined,
+      });
+
+      return newId;
+    }
   },
 });
