@@ -40,6 +40,7 @@ export interface PolarSubsription {
   cancel_at?: string | null;
   canceled_at?: string | null;
   customer?: PolarCustomer | null;
+  customer_id?: string | null;
   product_id?: string | null;
   product?: PolarProduct | null;
   prices?: PolarPrice[] | null;
@@ -47,3 +48,63 @@ export interface PolarSubsription {
   plan_code?: string | null;
   metadata?: Record<string, unknown> | null;
 }
+
+export interface PolarOrder {
+  id: string;
+  billing_reason?: string | null;
+  subscription_id?: string | null;
+  customer?: PolarCustomer | null;
+  customer_id?: string | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+export const extractSubscriptionLike = (
+  data: unknown,
+): PolarSubsription | null => {
+  if (data && typeof data === "object") {
+    const d = data as Record<string, unknown>;
+    const sub = (
+      d.subscription && typeof d.subscription === "object"
+        ? (d.subscription as Record<string, unknown>)
+        : d
+    ) as Record<string, unknown>;
+
+    const id = sub.id;
+    const status = sub.status;
+
+    if (typeof id === "string" && typeof status === "string") {
+      return {
+        id,
+        status,
+        current_period_end: sub.current_period_end as string | undefined | null,
+        trail_ends_at: sub.trail_ends_at as string | undefined | null,
+        cancel_at: sub.cancel_at as string | undefined | null,
+        canceled_at: sub.canceled_at as string | undefined | null,
+        customer: sub.customer as PolarCustomer | undefined | null,
+        customer_id: sub.customer_id as string | undefined | null,
+        product_id: sub.product_id as string | undefined | null,
+        product: sub.product as PolarProduct | undefined | null,
+        prices: sub.prices as PolarPrice[] | undefined | null,
+        seats: (typeof sub.seats === "number" ? sub.seats : undefined) ?? null,
+        plan_code: sub.plan_code as string | undefined | null,
+        metadata: (sub.metadata as Record<string, unknown> | undefined) ?? null,
+      };
+    }
+  }
+  return null;
+};
+
+export const extractOrderLike = (data: unknown): PolarOrder | null => {
+  if (!data || typeof data !== "object") return null;
+  const d = data as Record<string, unknown>;
+  const id = d.id;
+  if (typeof id !== "string") return null;
+  return {
+    id,
+    billing_reason: d.billing_reason as string | undefined | null,
+    subscription_id: d.subscription_id as string | undefined | null,
+    customer: d.customer as PolarCustomer | undefined | null,
+    customer_id: d.customer_id as string | undefined | null,
+    metadata: (d.metadata as Record<string, unknown> | undefined) ?? null,
+  };
+};
