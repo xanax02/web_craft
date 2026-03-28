@@ -167,61 +167,61 @@ export const getAllForUser = query({
   },
 });
 
-export const grantCreditsIfNeeded = mutation({
-  args: {
-    subscriptionId: v.id("subscriptions"),
-    idempotencyKey: v.string(),
-    amount: v.optional(v.number()),
-    reason: v.optional(v.string()),
-  },
-  handler: async (ctx, { subscriptionId, idempotencyKey, amount, reason }) => {
-    const dup = await ctx.db
-      .query("creditsLedger")
-      .withIndex("by_idempotencyKey", (q) =>
-        q.eq("idempotencyKey", idempotencyKey),
-      )
-      .first();
+// export const grantCreditsIfNeeded = mutation({
+//   args: {
+//     subscriptionId: v.id("subscriptions"),
+//     idempotencyKey: v.string(),
+//     amount: v.optional(v.number()),
+//     reason: v.optional(v.string()),
+//   },
+//   handler: async (ctx, { subscriptionId, idempotencyKey, amount, reason }) => {
+//     const dup = await ctx.db
+//       .query("creditsLedger")
+//       .withIndex("by_idempotencyKey", (q) =>
+//         q.eq("idempotencyKey", idempotencyKey),
+//       )
+//       .first();
 
-    if (dup) {
-      return { ok: true, skipped: true, reason: "duplicate-ledger" };
-    }
+//     if (dup) {
+//       return { ok: true, skipped: true, reason: "duplicate-ledger" };
+//     }
 
-    const sub = await ctx.db.get(subscriptionId);
-    if (!sub) return { ok: false, reason: "subscription-not-found" };
+//     const sub = await ctx.db.get(subscriptionId);
+//     if (!sub) return { ok: false, reason: "subscription-not-found" };
 
-    if (sub.lastGrantCursor === idempotencyKey) {
-      return { ok: true, skipped: true, reason: "cursor-match" };
-    }
+//     if (sub.lastGrantCursor === idempotencyKey) {
+//       return { ok: true, skipped: true, reason: "cursor-match" };
+//     }
 
-    if (!ENTITLED.has(sub.status)) {
-      return { ok: true, skipped: true, reason: "not-entitled" };
-    }
+//     if (!ENTITLED.has(sub.status)) {
+//       return { ok: true, skipped: true, reason: "not-entitled" };
+//     }
 
-    const grant = amount ?? sub.cerditsGrantPerPeriod ?? DEFAULT_GRANT;
-    if (grant <= 0) {
-      return { ok: true, skipped: true, reason: "zero-grant" };
-    }
+//     const grant = amount ?? sub.cerditsGrantPerPeriod ?? DEFAULT_GRANT;
+//     if (grant <= 0) {
+//       return { ok: true, skipped: true, reason: "zero-grant" };
+//     }
 
-    const next = Math.min(
-      sub.creditBalance + grant,
-      sub.creditsRolloverLimit ?? DEFAULT_ROLLOVER,
-    );
+//     const next = Math.min(
+//       sub.creditBalance + grant,
+//       sub.creditsRolloverLimit ?? DEFAULT_ROLLOVER,
+//     );
 
-    await ctx.db.patch(subscriptionId, {
-      creditBalance: next,
-      lastGrantCursor: idempotencyKey,
-    });
+//     await ctx.db.patch(subscriptionId, {
+//       creditBalance: next,
+//       lastGrantCursor: idempotencyKey,
+//     });
 
-    await ctx.db.insert("creditsLedger", {
-      subscriptionId,
-      idempotencyKey,
-      amount: grant,
-      reason: reason || "periodic-grant",
-      userId: sub.userId,
-      type: "grant",
-      meta: { prev: sub.creditBalance, next },
-    });
+//     await ctx.db.insert("creditsLedger", {
+//       subscriptionId,
+//       idempotencyKey,
+//       amount: grant,
+//       reason: reason || "periodic-grant",
+//       userId: sub.userId,
+//       type: "grant",
+//       meta: { prev: sub.creditBalance, next },
+//     });
 
-    return { ok: true, granted: grant, balance: next };
-  },
-});
+//     return { ok: true, granted: grant, balance: next };
+//   },
+// });

@@ -48,23 +48,32 @@ export const useInfiniteCanvas = () => {
   const viewport = useAppSelector((s) => s.viewport);
 
   const entityState = useAppSelector((s) => s.shapes.shapes);
-  const shapeList: Shape[] = entityState.ids
-    .map((id: string) => entityState.entities[id])
-    .filter((s: Shape | undefined): s is Shape => Boolean(s));
+  const shapeList: Shape[] = entityState?.ids
+    ? entityState.ids
+        .map((id: string) => entityState?.entities[id])
+        .filter((s: Shape | undefined): s is Shape => Boolean(s))
+    : [];
 
   const currentTool = useAppSelector((s) => s.shapes.tool);
   const selectedShapes = useAppSelector((s) => s.shapes.selected);
-  const shapesEntities = useAppSelector((s) => s.shapes.shapes.entities);
+  const shapesEntities = useAppSelector((s) => s.shapes?.shapes?.entities);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  useEffect(() => {
+    console.log("rendering store data  at mounting");
+    console.log("selected shapes", selectedShapes);
+    console.log("shapes entities", shapesEntities);
+  }, [selectedShapes, shapesEntities]);
+
   //if text is selected
   const hasSelectedText = Object.keys(selectedShapes).some((id: string) => {
-    const shape = shapesEntities[id];
+    const shape = shapesEntities?.[id];
     return shape?.type === "text";
   });
 
   useEffect(() => {
+    console.log("what is the selectedShape", selectedShapes);
     if (hasSelectedText && !isSidebarOpen) {
       setIsSidebarOpen(true);
     } else if (!hasSelectedText) {

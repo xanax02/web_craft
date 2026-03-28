@@ -5,12 +5,17 @@ import ImagesBoard from "./ImagesBoard";
 import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRef } from "react";
+import { useSearchParams } from "next/navigation";
+import GenerateStyleGuideButton from "@/components/creativeButtons/generateStyleGuide/GenerateStyleGuideButton";
 
 type Props = {
   guideImages: MoodBoardImages[];
 };
 
 export default function MoodBoard({ guideImages }: Props) {
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get("project");
+
   const {
     images,
     dragActive,
@@ -26,8 +31,6 @@ export default function MoodBoard({ guideImages }: Props) {
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
-
-  console.log("images", images);
 
   return (
     <div className="mx-4 flex flex-col gap-10">
@@ -166,7 +169,13 @@ export default function MoodBoard({ guideImages }: Props) {
           multiple
         />
       </div>
-      <Button className="w-fit">Generate With AI</Button>
+
+      <GenerateStyleGuideButton
+        images={images}
+        fileInputRef={fileInputRef}
+        projectId={projectId ?? ""}
+      />
+
       {images.length >= 5 && (
         <div className="text-center p-4 bg-muted/50 rounded-2xl">
           <p className="text-sm text-muted-foreground">
