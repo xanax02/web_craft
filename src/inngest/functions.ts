@@ -4,6 +4,7 @@ import { api } from "../../convex/_generated/api";
 import {
   extractOrderLike,
   extractSubscriptionLike,
+  isEntitledStatus,
   isPolarWebhookEvent,
   PolarOrder,
   PolarSubsription,
@@ -38,6 +39,17 @@ export const autosaveProjectWorkflow = inngest.createFunction(
     }
   },
 );
+
+const grantKey = (
+  subId: string,
+  periodEndMs: number | undefined,
+  eventId?: string | number,
+): string =>
+  periodEndMs != null
+    ? `${subId}: ${periodEndMs}`
+    : eventId != null
+      ? `${subId}:evt:${eventId}`
+      : `${subId}: first`;
 
 export const handlePolarEvent = inngest.createFunction(
   { id: "polar-webhook-handler" },
@@ -145,7 +157,7 @@ export const handlePolarEvent = inngest.createFunction(
         const existingByPolar = await fetchQuery(
           api.subscription.getPolarById,
           {
-            polarSubscriptionId: payload.sub,
+            polarSubscriptionId: payload.polarSubsriptionId,
           },
         );
         console.log("[Inngest] Existing subscription:", existingByPolar);
@@ -166,11 +178,14 @@ export const handlePolarEvent = inngest.createFunction(
         }
 
         const result = await fetchMutation(
-          api.subscription.upsertFromPolar,
+          api.subscription.upsertByPolar,
           payload,
         );
 
-        return result;
+        const allUserSubs = await fetchQuery(api.subscription.getAllForUser, {
+          userId: payload.userId,
+        });
+        // console.log("[Inngest] All user subscriptions:", allUserSubs);
         // if (existingByPolar) {
         //   console.log("[Inngest] Updating existing subscription...");
         //   await fetchMutation(api.subscription.update, {
@@ -181,10 +196,116 @@ export const handlePolarEvent = inngest.createFunction(
         //   console.log("[Inngest] Creating new subscription...");
         //   await fetchMutation(api.subscription.create, payload);
         // }
+
+        if (allUserSubs && allUserSubs.length > 1) {
+          allUserSubs.forEach((sub, index) => {
+            console.log(`[Inngest] Subscription ${index}:`, sub.status);
+          });
+        }
+
+        return result;
       } catch (error) {
         console.error("[Inngest] Error upserting subscription:", error);
         throw error;
       }
     });
+
+    const lookCreate = /subscription\.created/.test(type);
+    const lookRenew =
+      /subscription\.renew|order\.created|invoice\.paid|order\.paid/.test(type);
+
+    const entitled = isEntitledStatus(payload.status);
+
+    console.log("- Event type ", type);
+    console.log(" - Look like created", lookCreate);
+    console.log(" - Look like renew", lookRenew);
+    console.log(" - Entitled", entitled);
+    console.log(" - Status", payload.status);
+
+    const idk = grantKey(polarSubsriptionId, currentPeriodEnd, incoming.id);
+
+    console.log(" - Idempotency key", idk);
+
+    if (entitled && (lookCreate || lookRenew || true)) {
+      const grant = await step.run("grant-credits", async () => {
+        try {
+          console.log("[Inngest] Granting credits...");
+          const result = await fetchMutation(
+            api.subscription.grantCreditsIfNeeded,
+            {
+              subscriptionId,
+              idempotencyKey: idk,
+              amount: 10,
+              reason: lookCreate ? "initial-grant" : "periodic-grant",
+            },
+          );
+          return result;
+        } catch (error) {
+          console.error("[Inngest] Error granting credits:", error);
+          throw error;
+        }
+      });
+
+      console.log("[Inngest] grant result: ", grant);
+      if (grant.ok && !("skipped" in grant && grant.skipped)) {
+        await step.sendEvent("credit-granted", {
+          name: "billing/credits.granted",
+          id: `credits-granted:${polarSubsriptionId}:${currentPeriodEnd ?? "first"}`,
+          data: {
+            userId,
+            amount: "granted" in grant ? (grant.granted ?? 10) : 10,
+            balance: "balance" in grant ? grant.balance : undefined,
+            periodEnd: currentPeriodEnd,
+          },
+        });
+        console.log("[Inngest]: Credit grant event seent");
+      } else {
+        console.log("[Inngest]: Credit grant skipped");
+      }
+    } else {
+      console.log("[Inngest] credit granting codition not met");
+    }
+
+    await step.sendEvent("sub-synced", {
+      name: "billing/subscription.synced",
+      id: `sub-synced:${polarSubsriptionId}:${currentPeriodEnd ?? "first"}`,
+      data: {
+        userId,
+        polarSubsriptionId,
+        status: payload.status,
+        currentPeriodEnd,
+      },
+    });
+
+    console.log("[Inngest] Subscription synced event sent");
+    if (currentPeriodEnd && currentPeriodEnd > Date.now()) {
+      const runAt = new Date(
+        Math.max(Date.now() + 5000, currentPeriodEnd - 3 * 24 * 60 * 60 * 1000),
+      );
+      await step.sleepUntil("wait-before-renew", runAt);
+      const stillEntitled = await step.run("check-entitlement", async () => {
+        console.log("[Inngest] Still entitled: ", stillEntitled);
+        try {
+          const result = await fetchQuery(api.subscription.hasEntitlement, {
+            userId,
+          });
+          return result;
+        } catch (error) {
+          console.error("[Inngest] Error checking entitlement:", error);
+          throw error;
+        }
+      });
+
+      if (stillEntitled) {
+        await step.sendEvent("pre-expiry", {
+          name: "billing/subscription.pre_expiry",
+          data: {
+            userId,
+            runAt: runAt.toISOString(),
+            periodEnd: currentPeriodEnd,
+          },
+        });
+      }
+    }
   },
 );

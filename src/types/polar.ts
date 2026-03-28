@@ -117,3 +117,7 @@ export const toMs = (
   const t = Date.parse(x);
   return Number.isNaN(t) ? undefined : t;
 };
+
+export const isEntitledStatus = (status: string): boolean => {
+  return /^(active|trialing|past_due|unpaid)$/.test(status);
+};

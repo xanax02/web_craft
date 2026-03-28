@@ -3,6 +3,7 @@ import { query, mutation } from "./_generated/server";
 
 const DEFAULT_GRANT = 10;
 const DEFAULT_ROLLOVER = 100;
+const ENTITLED = new Set(["active", "trailing"]);
 
 export const hasEntitlement = query({
   args: { userId: v.id("users") },
@@ -150,5 +151,77 @@ export const upsertByPolar = mutation({
 
       return newId;
     }
+  },
+});
+
+export const getAllForUser = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const subscriptions = await ctx.db
+      .query("subscriptions")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .collect();
+    return subscriptions;
+  },
+});
+
+export const grantCreditsIfNeeded = mutation({
+  args: {
+    subscriptionId: v.id("subscriptions"),
+    idempotencyKey: v.string(),
+    amount: v.optional(v.number()),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, { subscriptionId, idempotencyKey, amount, reason }) => {
+    const dup = await ctx.db
+      .query("creditsLedger")
+      .withIndex("by_idempotencyKey", (q) =>
+        q.eq("idempotencyKey", idempotencyKey),
+      )
+      .first();
+
+    if (dup) {
+      return { ok: true, skipped: true, reason: "duplicate-ledger" };
+    }
+
+    const sub = await ctx.db.get(subscriptionId);
+    if (!sub) return { ok: false, reason: "subscription-not-found" };
+
+    if (sub.lastGrantCursor === idempotencyKey) {
+      return { ok: true, skipped: true, reason: "cursor-match" };
+    }
+
+    if (!ENTITLED.has(sub.status)) {
+      return { ok: true, skipped: true, reason: "not-entitled" };
+    }
+
+    const grant = amount ?? sub.cerditsGrantPerPeriod ?? DEFAULT_GRANT;
+    if (grant <= 0) {
+      return { ok: true, skipped: true, reason: "zero-grant" };
+    }
+
+    const next = Math.min(
+      sub.creditBalance + grant,
+      sub.creditsRolloverLimit ?? DEFAULT_ROLLOVER,
+    );
+
+    await ctx.db.patch(subscriptionId, {
+      creditBalance: next,
+      lastGrantCursor: idempotencyKey,
+    });
+
+    await ctx.db.insert("creditsLedger", {
+      subscriptionId,
+      idempotencyKey,
+      amount: grant,
+      reason: reason || "periodic-grant",
+      userId: sub.userId,
+      type: "grant",
+      meta: { prev: sub.creditBalance, next },
+    });
+
+    return { ok: true, granted: grant, balance: next };
   },
 });
