@@ -1,11 +1,12 @@
 "use client";
 import { useMutation } from "convex/react";
-import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { RefObject, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { api } from "../../convex/_generated/api";
 import { toast } from "sonner";
 import { Id } from "../../convex/_generated/dataModel";
+import { useGenerateStyleGuideMutation } from "@/redux/api/style-guide";
 
 export interface MoodBoardImages {
   id: string;
@@ -280,5 +281,75 @@ export const useMoodBoard = (guideImages: MoodBoardImages[]) => {
     handleDrop,
     handleFileInput,
     canAddMore: images.length < 5,
+  };
+};
+
+export const useStyleGuide = (
+  projectId: string,
+  images: MoodBoardImages[],
+  fileInputRef: RefObject<HTMLInputElement | null>,
+) => {
+  const [generateStyleGuide, { isLoading: isGenerating }] =
+    useGenerateStyleGuideMutation();
+
+  const router = useRouter();
+  const handleUploadClick = () => fileInputRef.current?.click();
+
+  const handleGenerateStyleGuide = async () => {
+    if (!projectId) {
+      toast.error("No Project selected");
+      return;
+    }
+
+    if (images.length === 0) {
+      toast.error("Please upload at least one image to generate a style guide");
+      return;
+    }
+
+    if (images.some((img) => img.uploading)) {
+      toast.error("Please wait for all images to finish uploading");
+      return;
+    }
+
+    try {
+      toast.loading("Analysing mood board images...", {
+        id: "style-guide-generation",
+      });
+
+      const result = await generateStyleGuide({
+        projectId,
+      }).unwrap();
+
+      if (!result.success) {
+        toast.error(result.message, { id: "style-guide-generation" });
+        return;
+      }
+
+      router.refresh();
+
+      toast.success("Style guide generated successfully!", {
+        id: "style-guide-generation",
+      });
+      setTimeout(() => {
+        toast.success(
+          "Style guide generated! Switch ot  the Colours tab to see the result",
+          { duration: 5000 },
+        );
+      }, 1000);
+    } catch (error) {
+      const errorMessage =
+        error && typeof error === "object" && "error" in error
+          ? (error as { error: string }).error
+          : "Failed to generate style guide";
+      toast.error(errorMessage, {
+        id: "style-guide-generation",
+      });
+    }
+  };
+
+  return {
+    isGenerating,
+    handleUploadClick,
+    handleGenerateStyleGuide,
   };
 };

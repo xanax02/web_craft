@@ -1,5 +1,6 @@
+"use client";
 import { Button } from "@/components/ui/button";
-import { MoodBoardImages } from "@/hooks/useStyles";
+import { MoodBoardImages, useStyleGuide } from "@/hooks/useStyles";
 import { Loader2, Sparkles } from "lucide-react";
 
 type Props = {
@@ -13,7 +14,12 @@ export default function GenerateStyleGuideButton({
   fileInputRef,
   projectId,
 }: Props) {
-  const handleGenerateStyleGuild = () => {};
+  const {handleGenerateStyleGuild, isGenerating} = useStyleGuide(
+    projectId,
+    images
+    fileInputRef
+  );
+
   return (
     images.length > 0 && (
       <div className="flex justify-end">
