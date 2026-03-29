@@ -1,12 +1,14 @@
 "use client";
 import { useMutation } from "convex/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { RefObject, useEffect, useState } from "react";
+import { RefObject, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { api } from "../../convex/_generated/api";
 import { toast } from "sonner";
 import { Id } from "../../convex/_generated/dataModel";
 import { useGenerateStyleGuideMutation } from "@/redux/api/style-guide";
+import { GeneratedUIShape, updateShape } from "@/redux/slice/shapes";
+import { useAppDispatch } from "@/redux/store";
 
 export interface MoodBoardImages {
   id: string;
@@ -136,6 +138,8 @@ export const useMoodBoard = (guideImages: MoodBoardImages[]) => {
     toast.success("Image added to mood board");
   };
 
+  // TODO: on first render this function is giving some storage error
+  // might be related to some redux logic or something else
   const removeImage = async (imageId: string) => {
     const imageToRemove = images.find((img) => img.id === imageId);
     if (!imageToRemove) return;
@@ -352,4 +356,39 @@ export const useStyleGuide = (
     handleUploadClick,
     handleGenerateStyleGuide,
   };
+};
+
+export const useUpdateContainer = (shape: GeneratedUIShape) => {
+  const dispatch = useAppDispatch();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (containerRef.current && shape.uiSpecData) {
+      const timeoutId = setTimeout(() => {
+        const actualHeight = containerRef.current?.offsetHeight || 0;
+        if (actualHeight > 0 && Math.abs(actualHeight - shape.h) > 10) {
+          dispatch(
+            updateShape({
+              id: shape.id,
+              patch: { h: actualHeight },
+            }),
+          );
+        }
+      }, 100);
+    }
+  }, [shape.uiSpecData, shape.id, shape.h]);
+
+  //html sanitization
+  const sanitizedHtml = (html: string) => {
+    const sanitized = html
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, "")
+      .replace(/on\w+="[^"]*"/gi, "") // remove event handlers
+      .replace(/javascript:/gi, "") // remove js: protocols
+      .replace(/data:/gi, ""); // remove data: protocols
+
+    return sanitized;
+  };
+
+  return { containerRef, sanitizedHtml };
 };
