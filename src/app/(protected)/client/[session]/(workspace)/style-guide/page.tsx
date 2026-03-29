@@ -16,11 +16,13 @@ export default async function Page({
 
   const existingStyleGuide = await StyleGuideQuery(projectId);
 
+  console.log("existing style guide", existingStyleGuide);
+
   const guide = existingStyleGuide.styleGuide
     ._valueJSON as unknown as StyleGuide;
 
-  const colorGuide = guide?.colorSection || [];
-  const typographyGuide = guide?.typographySection || [];
+  const colorGuide = guide?.colorSections || [];
+  const typographyGuide = guide?.typographySections || [];
 
   const exisitingMoodBoardImages = await MoodBoardImagesQuery(projectId);
 

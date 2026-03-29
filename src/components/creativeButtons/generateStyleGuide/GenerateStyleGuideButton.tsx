@@ -14,10 +14,10 @@ export default function GenerateStyleGuideButton({
   fileInputRef,
   projectId,
 }: Props) {
-  const {handleGenerateStyleGuild, isGenerating} = useStyleGuide(
+  const { handleGenerateStyleGuide, isGenerating } = useStyleGuide(
     projectId,
-    images
-    fileInputRef
+    images,
+    fileInputRef,
   );
 
   return (
@@ -25,7 +25,7 @@ export default function GenerateStyleGuideButton({
       <div className="flex justify-end">
         <Button
           className="rounded-full"
-          onClick={handleGenerateStyleGuild}
+          onClick={handleGenerateStyleGuide}
           disabled={isGenerating || images.some((img) => img.uploading)}
         >
           {isGenerating ? (

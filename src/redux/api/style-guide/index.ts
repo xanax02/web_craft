@@ -34,14 +34,14 @@ export interface ColorSection {
 export interface StyleGuide {
   theme: string;
   description: string;
-  colorSection: [
+  colorSections: [
     ColorSection,
     ColorSection,
     ColorSection,
     ColorSection,
     ColorSection,
   ];
-  typographySection: [TypographySection, TypographySection, TypographySection];
+  typographySections: [TypographySection, TypographySection, TypographySection];
 }
 
 export interface GenerateStyleGuideRequest {
@@ -54,7 +54,7 @@ export interface GenerateStyleGuideResponse {
   message: string;
 }
 
-export const styleGuildeApi = createApi({
+export const StyleGuideApi = createApi({
   reducerPath: "styleGuideApi",
   baseQuery: fetchBaseQuery({
     baseUrl: "/api/generate",
@@ -78,4 +78,4 @@ export const styleGuildeApi = createApi({
   }),
 });
 
-export const { useGenerateStyleGuideMutation } = styleGuildeApi;
+export const { useGenerateStyleGuideMutation } = StyleGuideApi;

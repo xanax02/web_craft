@@ -166,8 +166,19 @@ export async function POST(request: NextRequest) {
       },
     );
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      styleGuide: result.object,
+      message: "Style guide generated successfully",
+      balance: 0,
+    });
   } catch (error) {
-    return new Response("Internal Server Error", { status: 500 });
+    return NextResponse.json(
+      {
+        error: "Failed to generate style guide",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    );
   }
 }
