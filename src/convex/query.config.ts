@@ -1,5 +1,5 @@
 import { convexAuthNextjsToken } from "@convex-dev/auth/nextjs/server";
-import { preloadQuery } from "convex/nextjs";
+import { fetchMutation, preloadQuery } from "convex/nextjs";
 import { api } from "../../convex/_generated/api";
 import { ConvexUserRaw, normalizeProfile } from "@/types/user";
 import { Id } from "../../convex/_generated/dataModel";
@@ -111,3 +111,27 @@ export const MoodBoardImagesQuery = async (projectId: string) => {
 
 //   return { ok: true, balance: balance._valueJSON, profile };
 // };
+
+// this if for when requesting ai model for generating mood boards colors , typography, design system
+export const ConsumeCreditsQuery = async ({ amount }: { amount?: number }) => {
+  const profile = await ProfileQuery();
+  const profileData = normalizeProfile(
+    profile._valueJSON as unknown as ConvexUserRaw | null,
+  );
+
+  if (!profileData?.id) {
+    return { ok: false, balance: 0, profile: null };
+  }
+
+  const credits = await fetchMutation(
+    api.subscription.ConsumeCredits,
+    {
+      reason: "ai:generation",
+      userId: profileData.id as Id<"users">,
+      amount: amount || 1,
+    },
+    { token: await convexAuthNextjsToken() },
+  );
+
+  return { ok: true, balance: credits.balance, profile: profileData };
+};

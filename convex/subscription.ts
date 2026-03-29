@@ -225,3 +225,62 @@ export const getAllForUser = query({
 //     return { ok: true, granted: grant, balance: next };
 //   },
 // });
+
+export const ConsumeCredits = mutation({
+  args: {
+    userId: v.id("users"),
+    amount: v.number(),
+    reason: v.optional(v.string()),
+    idempotencyKey: v.optional(v.string()),
+  },
+  handler: async (ctx, { userId, amount, reason, idempotencyKey }) => {
+    if (amount <= 0) return { ok: false, error: "invalid-amount" };
+
+    if (idempotencyKey) {
+      const dupe = await ctx.db
+        .query("creditsLedger")
+        .withIndex("by_idempotencyKey", (q) =>
+          q.eq("idempotencyKey", idempotencyKey),
+        )
+        .first();
+
+      if (dupe) {
+        return { ok: true, idempotent: true };
+      }
+    }
+
+    const sub = await ctx.db
+      .query("subscriptions")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!sub) {
+      return { ok: false, error: "no-subscription" };
+    }
+
+    if (!ENTITLED.has(sub.status)) return { ok: false, error: "not-entitled" };
+
+    if (sub.creditBalance < amount) {
+      return {
+        ok: false,
+        error: "insufficient-credits",
+        balance: sub.creditBalance,
+      };
+    }
+
+    const next = (sub.creditBalance = amount);
+    await ctx.db.patch(sub._id, { creditBalance: next });
+
+    await ctx.db.insert("creditsLedger", {
+      userId,
+      subscriptionId: sub._id,
+      amount: -amount,
+      type: "consume",
+      reason: reason ?? "usage",
+      idempotencyKey,
+      meta: { prev: sub.creditBalance, next },
+    });
+
+    return { ok: true, balance: next };
+  },
+});
