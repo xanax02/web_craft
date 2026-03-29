@@ -1,6 +1,13 @@
-import { FrameShape, Shape } from "@/redux/slice/shapes";
-import { useAppSelector } from "@/redux/store";
+import {
+  addGeneratedUI,
+  FrameShape,
+  Shape,
+  updateShape,
+} from "@/redux/slice/shapes";
+import { useAppDispatch, useAppSelector } from "@/redux/store";
 import { useState } from "react";
+import { nanoid } from "@reduxjs/toolkit";
+import { toast } from "sonner";
 
 const isShapeInsideFrame = (shape: Shape, frame: FrameShape): boolean => {
   const frameLeft = frame.x;
@@ -244,6 +251,7 @@ const downloadBlob = (blob: Blob, filename: string) => {
 
 export const useFrame = (shape: FrameShape) => {
   const [isGenerating, setIsGenerating] = useState(false);
+  const dispatch = useAppDispatch();
 
   const allShapes = useAppSelector((state) => {
     return Object.values(state.shapes.shapes?.entities || {}).filter(
@@ -261,13 +269,89 @@ export const useFrame = (shape: FrameShape) => {
       formData.append("image", snapshot, `frame-${shape.frameNumber}.png`);
       formData.append("frameNumber", shape.frameNumber.toString());
 
-      const urlParams = new URLSearchParams();
+      const urlParams = new URLSearchParams(window.location.search);
       const projectId = urlParams.get("project");
 
       if (projectId) {
         formData.append("projectId", projectId);
       }
+
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `API request failed: ${response.status} ${response.statusText} - ${errorText}`,
+        );
+      }
+
+      const generatedUIPosition = {
+        x: shape.x + shape.w + 50,
+        y: shape.y,
+        w: Math.max(400, shape.w),
+        h: Math.max(300, shape.h),
+      };
+
+      const generatedUIId = nanoid();
+      dispatch(
+        addGeneratedUI({
+          ...generatedUIPosition,
+          id: generatedUIId,
+          uiSpecData: null,
+          sourceFrameId: shape.id,
+        }),
+      );
+
+      //stream the response
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      let accumulatedMarkup = "";
+
+      let lastUpdateTime = 0;
+      const UPDATE_THROTTLE_MS = 200;
+
+      if (reader) {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) {
+              dispatch(
+                updateShape({
+                  id: generatedUIId,
+                  patch: { uiSpecData: accumulatedMarkup },
+                }),
+              );
+              break;
+            }
+
+            const chunk = decoder.decode(value);
+            accumulatedMarkup += chunk;
+
+            const now = Date.now();
+            if (now - lastUpdateTime >= UPDATE_THROTTLE_MS) {
+              dispatch(
+                updateShape({
+                  id: generatedUIId,
+                  patch: { uiSpecData: accumulatedMarkup },
+                }),
+              );
+              lastUpdateTime = now;
+            }
+          }
+        } catch (error) {
+          console.error("Error reading stream:", error);
+        } finally {
+          reader?.releaseLock();
+        }
+      }
     } catch (error) {
+      toast.error(
+        `Failed to generate design: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     } finally {
       setIsGenerating(false);
     }
