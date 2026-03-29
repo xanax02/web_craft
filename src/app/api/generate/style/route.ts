@@ -1,10 +1,17 @@
-import { MoodBoardImagesQuery } from "@/convex/query.config";
+import {
+  ConsumeCreditsQuery,
+  MoodBoardImagesQuery,
+} from "@/convex/query.config";
 import { MoodBoardImages } from "@/hooks/useStyles";
 import { prompts } from "@/prompts";
 import { NextRequest, NextResponse } from "next/server";
 import { generateObject } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 import z from "zod";
+import { fetchMutation } from "convex/nextjs";
+import { api } from "../../../../../convex/_generated/api";
+import { Id } from "../../../../../convex/_generated/dataModel";
+import { convexAuthNextjsToken } from "@convex-dev/auth/nextjs/server";
 
 const ColorSwatchSchema = z.object({
   name: z.string(),
@@ -47,7 +54,7 @@ const TypographyStyleSchema = z.object({
   description: z.string().optional(),
 });
 
-const TypograpphySectionSchema = z.object({
+const TypographySectionSchema = z.object({
   title: z.string(),
   styles: z.array(TypographyStyleSchema),
 });
@@ -116,7 +123,7 @@ export async function POST(request: NextRequest) {
         Return only the JSON object matching the exact schema structure above.
     `;
 
-    const result = generateObject({
+    const result = await generateObject({
       model: anthropic("claude-sonnet-4-20250514"),
       schema: StyleGuideSchema,
       system: systemPrompt,
@@ -136,6 +143,28 @@ export async function POST(request: NextRequest) {
         },
       ],
     });
+
+    ///// uncomment when subsciption logic is in place and working fine
+    // const {ok, balance}  = await ConsumeCreditsQuery({amount: 1})
+
+    // if(!ok) {
+    //     return NextResponse.json(
+    //         {error: "Failed to generate style guide"},
+    //         { status: 500 }
+    //     )
+    // }
+    //////////////            ////
+
+    await fetchMutation(
+      api.projects.updateProjectStyleGuide,
+      {
+        projectId: projectId as Id<"projects">,
+        styleGuideData: result.object,
+      },
+      {
+        token: await convexAuthNextjsToken(),
+      },
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {
