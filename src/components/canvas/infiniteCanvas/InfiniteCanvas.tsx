@@ -11,6 +11,8 @@ import { ArrowPreview } from "../toolbar/shapes/arrow/preview";
 import { LinePreview } from "../toolbar/shapes/line/preview";
 import { FreeDrawStrokePreview } from "../toolbar/shapes/stroke/preview";
 import { SelectionOverlay } from "../toolbar/shapes/selection/SelectionOverlay";
+import { useInspiration } from "@/hooks/useInspiration";
+import InspirationSidebar from "../inspirationSidebar/InspirationSidebar";
 
 export default function InfiniteCanvas() {
   const {
@@ -32,9 +34,20 @@ export default function InfiniteCanvas() {
   const draftShape = getDraftShape();
   const freeDrawPoints = getFreeDrawPoints();
 
+  const {
+    isInspirationOpen,
+    closeInspiration,
+    toggleInspiration,
+    openInspiration,
+  } = useInspiration();
+
   return (
     <>
       <TextSidebar isOpen={isSidebarOpen && hasSelectedText} />
+      <InspirationSidebar
+        isOpen={isInspirationOpen}
+        onClose={closeInspiration}
+      />
 
       <div
         ref={attachCanvasRef}
@@ -71,7 +84,7 @@ export default function InfiniteCanvas() {
             <ShapeRenderer
               key={shape.id}
               shape={shape}
-              //   toggleInspiration={toggleInspiration}
+              toggleInspiration={toggleInspiration}
               //   toggleChat={toggleChat}
               //   generateWorkflow={generateWorkflow}
               //   exportDesign={exportDesign}
