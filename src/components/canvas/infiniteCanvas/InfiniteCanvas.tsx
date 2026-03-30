@@ -13,6 +13,7 @@ import { FreeDrawStrokePreview } from "../toolbar/shapes/stroke/preview";
 import { SelectionOverlay } from "../toolbar/shapes/selection/SelectionOverlay";
 import { useInspiration } from "@/hooks/useInspiration";
 import InspirationSidebar from "../inspirationSidebar/InspirationSidebar";
+import { useGlobalChat } from "@/hooks/useGlobalChat";
 
 export default function InfiniteCanvas() {
   const {
@@ -34,12 +35,10 @@ export default function InfiniteCanvas() {
   const draftShape = getDraftShape();
   const freeDrawPoints = getFreeDrawPoints();
 
-  const {
-    isInspirationOpen,
-    closeInspiration,
-    toggleInspiration,
-    openInspiration,
-  } = useInspiration();
+  const { isInspirationOpen, closeInspiration, toggleInspiration } =
+    useInspiration();
+
+  const { isChatOpen, activeGeneratedUIId, generateWorkflow } = useGlobalChat();
 
   return (
     <>
@@ -86,7 +85,7 @@ export default function InfiniteCanvas() {
               shape={shape}
               toggleInspiration={toggleInspiration}
               //   toggleChat={toggleChat}
-              //   generateWorkflow={generateWorkflow}
+              generateWorkflow={generateWorkflow}
               //   exportDesign={exportDesign}
             />
           ))}

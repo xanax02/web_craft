@@ -1,4 +1,5 @@
+import { generationApi } from "./generation";
 import { ProjectApi } from "./project";
 import { StyleGuideApi } from "./style-guide";
 
-export const apis = [ProjectApi, StyleGuideApi];
+export const apis = [ProjectApi, StyleGuideApi, generationApi];
